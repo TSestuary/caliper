@@ -160,28 +160,28 @@ else
 	fi
 fi
 #mount a disk partition for storage testing
-if [ ! -d "/mnt/sdb/" ]
-then
-    echo -e "\nCreating Mount Partition for fio testing\n"
-    sudo mkdir -p /mnt/sdb/
-        sudo chmod -R 775 /mnt/sdb
-        sudo chown -R $USER:$USER /mnt/sdb
-        sudo mount $2 /mnt/sdb
-        if [ $? -ne 0 ]
-        then
-       echo -e "\n$ERROR:Creating a Mount Path for Fio testing Failed\n" >> target_dependency_output_summary.txt
-    fi
-else
-        if [ `mount -l | grep -c "$2 on /mnt/sdb"` == 0 ]
-        then
-            sudo mount $2 /mnt/sdb
-                if [ $? -ne 0 ]
-                then
-                echo -e "\n$ERROR:Creating a Mount Path for Fio testing Failed\n" >> target_dependency_output_summary.txt
-            fi
-        fi
-        echo -e "\nMount Partition for storage testing Already exits\n" >> target_dependency_output_summary.txt
-fi
+#if [ ! -d "/mnt/sdb/" ]
+#then
+#    echo -e "\nCreating Mount Partition for fio testing\n"
+#    sudo mkdir -p /mnt/sdb/
+#        sudo chmod -R 775 /mnt/sdb
+#        sudo chown -R $USER:$USER /mnt/sdb
+#        sudo mount $2 /mnt/sdb
+#        if [ $? -ne 0 ]
+#        then
+#       echo -e "\n$ERROR:Creating a Mount Path for Fio testing Failed\n" >> target_dependency_output_summary.txt
+#    fi
+#else
+#        if [ `mount -l | grep -c "$2 on /mnt/sdb"` == 0 ]
+#        then
+#            sudo mount $2 /mnt/sdb
+#                if [ $? -ne 0 ]
+#                then
+#                echo -e "\n$ERROR:Creating a Mount Path for Fio testing Failed\n" >> target_dependency_output_summary.txt
+#            fi
+#        fi
+#        echo -e "\nMount Partition for storage testing Already exits\n" >> target_dependency_output_summary.txt
+#fi
 
 #copying the perf 
 if [ ! $Osname_Ubuntu -eq 0 ]
@@ -194,4 +194,3 @@ then
         echo -e "\n\t\t$ERROR:Failed to cp the perf path" >> target_dependency_output_summary.txt
     fi
 fi
-

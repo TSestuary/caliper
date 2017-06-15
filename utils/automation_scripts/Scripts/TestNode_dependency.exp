@@ -8,6 +8,7 @@ set option [lindex $argv 0]
 set TestNode_user [lindex $argv 1]
 set TestNode_ip [lindex $argv 2]
 set passwd [lindex $argv 3]
+set path [lindex $argv 4]
 
 #set i 0
 spawn scp TestNode_dependency.sh $TestNode_user@$TestNode_ip:./
@@ -45,5 +46,8 @@ while true {
 	}
 }
 
-
+spawn scp $client_user@$client_ip:~/TestNode_dependency_dir/TestNode_dependency_output_summary.txt $path/caliper_output/TestNode_dependency_output_summary.txt
+expect {
+    "$client_user@$client_ip's password: " {send "[lindex $passwd ]\r";  exp_continue}
+}
 
