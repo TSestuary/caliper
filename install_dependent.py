@@ -2,18 +2,25 @@
 #-*- encoding:UTF-8 -*-
 
 import os
-import time
 from Tkinter import *
+import tkMessageBox
 import ttk
 import threading
 from subprocess import Popen, PIPE
 import pexpect
 import shutil
 
-
 path =  os.getcwd()
 script_path = os.path.join(path, 'utils/automation_scripts/Scripts')
 home_path = os.getcwd().split('/')
+caliper_output_path = os.sep + home_path[1] + os.sep + home_path[2] + os.sep + 'caliper_output'
+target_log_path = caliper_output_path + os.sep + 'target_export_log.txt'
+host_log_path = caliper_output_path + os.sep + 'host_export_log.txt'
+node_log_path = caliper_output_path + os.sep + 'TestNode_export_log.txt'
+log_file = [target_log_path, host_log_path, node_log_path]
+for log in log_file:
+    if os.path.exists(log):
+        os.remove(log)
 
 class Result():
     def __init__(self):
@@ -31,6 +38,11 @@ class Result():
                     Label(self.top, text=line, fg = 'RED').grid(sticky=W)
                 else:
                     Label(self.top, text=line).grid(sticky=W)
+
+    def open_target_log(self):
+        tkMessageBox.showinfo("target log", "target log path : %s"%target_log_path)
+        # os.system("gedit '%s'"%target_log_path)
+
     def node_result(self):
         self.top = Toplevel()
         self.top.title('node install result')
@@ -44,6 +56,11 @@ class Result():
                     Label(self.top, text=line, fg = 'RED').grid(sticky=W)
                 else:
                     Label(self.top, text=line).grid(sticky=W)
+
+    def open_node_log(self):
+        tkMessageBox.showinfo("node log", "node log path : %s" % node_log_path)
+        # os.system("gedit '%s'"%node_log_path)
+
     def host_result(self):
         self.top = Toplevel()
         self.top.title('host install result')
@@ -58,7 +75,9 @@ class Result():
                 else:
                     Label(self.top, text=line).grid(sticky=W)
 
-
+    def open_host_log(self):
+        tkMessageBox.showinfo("host log", "host log path : %s" % host_log_path)
+        # os.system("gedit '%s'"%host_log_path)
 
 class install_dependency_thread(threading.Thread):
     def __init__(self, dependency, display, run_command):
@@ -69,24 +88,29 @@ class install_dependency_thread(threading.Thread):
 
     def run(self):
         if self.dependency == 'target':
+            target_log_button.configure(state=DISABLED)
             target_view_button.configure(state=DISABLED)
             target_install_button.configure(state=DISABLED)
-        elif self.dependency == 'TestNode':
-            node_view_button.configure(state=DISABLED)
-            node_install_button.configure(state=DISABLED)
-        os.chdir(script_path)
-        exec_log(self.display, self.command)
-        if self.dependency == 'target':
+            os.chdir(script_path)
+            exec_log(self.display, self.command, target_log_path)
             self.copy_key(target_ip_value, target_password_value)
-        elif self.dependency == 'TestNode':
-            self.copy_key(node_ip_value, node_password_value)
-        os.chdir(path)
-        if self.dependency == 'target':
+            target_log_button.configure(state=NORMAL)
             target_install_button.configure(state=NORMAL)
             target_view_button.configure(state=NORMAL)
+            display_line(target_text, '*******************Install finished**********************')
         elif self.dependency == 'TestNode':
+            node_log_button.configure(state=DISABLED)
+            node_view_button.configure(state=DISABLED)
+            node_install_button.configure(state=DISABLED)
+            os.chdir(script_path)
+            exec_log(self.display, self.command, node_log_path)
+            self.copy_key(node_ip_value, node_password_value)
             node_view_button.configure(state=NORMAL)
             node_install_button.configure(state=NORMAL)
+            node_log_button.configure(state=NORMAL)
+            display_line(node_text, '*******************Install finished**********************')
+        os.chdir(path)
+
 
     def copy_key(self, dependency_ip_value, dependency_password_value):
         ssh_check = os.popen('ls /%s/%s/.ssh/' % (home_path[1], home_path[2]))
@@ -116,6 +140,7 @@ class install_host_thread(threading.Thread):
     def run(self):
         host_view_button.configure(state=DISABLED)
         host_install_button.configure(state=DISABLED)
+        host_log_button.configure(state=DISABLED)
         #check expect
         expect_check = os.popen("dpkg-query -W -f='${Status}' expect | grep -c "+'"ok installed"')
         expect_check = expect_check.read().replace('\n', '')
@@ -141,7 +166,7 @@ class install_host_thread(threading.Thread):
                 display_line(host_text, '*******************Install expect fail**********************')
 
         os.chdir(script_path)
-        exec_log(host_text, self.command)
+        exec_log(host_text, self.command, host_log_path)
         shutil.copyfile( os.path.join(script_path, 'host_dependency_dir/host_dependency_output_summary.txt'), '/%s/%s/caliper_output/host_dependency_output_summary.txt' % (home_path[1], home_path[2]))
         ssh_check = os.popen('ls /%s/%s/.ssh/'%(home_path[1],home_path[2]))
         ssh_check = ssh_check.read()
@@ -176,27 +201,35 @@ class install_host_thread(threading.Thread):
             except pexpect.EOF, e:
                 print 'fail'
                 display_line(host_text, e)
+                host_log = open(host_log_path)
+                host_log.write(e)
+                host_log.close()
                 f = open('/%s/%s/caliper_output/host_dependency_output_summary.txt' % (home_path[1], home_path[2]), 'a+')
                 f.write('ERROR-IN-AUTOMATION:Fail to create ssh key ')
                 f.close()
         os.chdir(path)
+        display_line(host_text, '*******************Install finished**********************')
         host_install_button.configure(state=NORMAL)
         host_view_button.configure(state=NORMAL)
+        host_log_button.configure(state=NORMAL)
 
 
 
-def exec_log(display, command):
+def exec_log(display, command, text):
+    f = open(text, 'a+')
     try:
         if (command != ""):
             adb_pipe = Popen(command, stdin=PIPE, stdout=PIPE, bufsize=1, shell=True)
             for line in iter(adb_pipe.stdout.readline, ''):
                 print line
                 display_line(display, line)
+                f.write(line)
     except OSError, e:
         display_line(display, e)
+        f.write(e)
 
 def display_line(display, line):
-    display.grid(row=8, column=0, columnspan=5, rowspan=5, sticky=W+E+N+S)
+    display.grid(row=8, column=0, columnspan=10, rowspan=10, sticky=W+E+N+S)
     display.insert(INSERT, "%s\n" % line)
     display.see(END)
     display.update()
@@ -232,6 +265,10 @@ def node_install():
 if __name__ == "__main__":
     master = Tk()
     var = IntVar()
+    master.resizable(0, 0)
+    screenwidth = master.winfo_screenwidth()
+    screenheight = master.winfo_screenheight()
+    master.geometry('%dx%d'%(screenwidth/3, screenheight/2))
     master.title('Caliper Install GUI')
 
     #create note book
@@ -255,11 +292,11 @@ if __name__ == "__main__":
     # i value is:target_user, target_ip, target_password, disk_name
     for i in range(0,2):
         akt_bb = StringVar()
-        entry = Entry(target_ui, width=30)
+        entry = Entry(target_ui, width=screenwidth/50)
         entry.grid(row=i, column=1, sticky=W)
         entries.append(entry)
 
-    password_entry = Entry(target_ui, width=30, show = '*')
+    password_entry = Entry(target_ui, width=screenwidth/50, show = '*')
     password_entry.grid(row=2, column=1, sticky=W)
 
     #Install button
@@ -274,12 +311,18 @@ if __name__ == "__main__":
     target_view_button.grid(row=6, column=3)
     target_view_button.configure(state = DISABLED)
 
+    # log button
+    global target_log_button
+    target_log_button = Button(target_ui, text='Log', command=result.open_target_log)
+    target_log_button.grid(row=6, column=4)
+    target_log_button.configure(state=DISABLED)
+
     #make host ui
     Label(host_ui, text="host pc password: ").grid(sticky=W)
 
     #weight layout
     # package_installation_choice.grid(row=0, column=1, sticky=W)
-    host_pc_password = Entry(host_ui, width=30, show = '*')
+    host_pc_password = Entry(host_ui, width=screenwidth/50, show = '*')
     host_pc_password.grid(row=0, column=1, sticky=W)
 
     #Install button
@@ -293,10 +336,17 @@ if __name__ == "__main__":
     host_view_button.grid(row=6, column=3)
     host_view_button.configure(state = DISABLED)
 
+    # log button
+    global host_log_button
+    host_log_button = Button(host_ui, text='Log', command=result.open_host_log)
+    host_log_button.grid(row=6, column=4)
+    host_log_button.configure(state=DISABLED)
+
+    #
     global host_text, target_text, node_text
-    host_text = Text(host_ui, height=15, wrap=WORD)
-    target_text = Text(target_ui, height=15, wrap=WORD)
-    node_text = Text(node_ui, height=15, wrap=WORD)
+    host_text = Text(host_ui, height=screenheight/35, wrap=WORD)
+    target_text = Text(target_ui, height=screenheight/35, wrap=WORD)
+    node_text = Text(node_ui, height=screenheight/35, wrap=WORD)
 
     #make node ui
     #weight layout
@@ -308,11 +358,11 @@ if __name__ == "__main__":
     node_entries = []
     # i value is:target_user, target_ip, target_password, disk_name
     for i in range(0,2):
-        node_entry = Entry(node_ui, width=30)
+        node_entry = Entry(node_ui, width=screenwidth/50)
         node_entry.grid(row=i, column=1, sticky=W)
         node_entries.append(node_entry)
 
-    node_password_entry = Entry(node_ui, width=30, show = '*')
+    node_password_entry = Entry(node_ui, width=screenwidth/50, show = '*')
     node_password_entry.grid(row=2, column=1, sticky=W)
 
     #Install button
@@ -326,6 +376,12 @@ if __name__ == "__main__":
     node_view_button = Button(node_ui, text='View result', command=result.node_result)
     node_view_button.grid(row=6, column=3)
     node_view_button.configure(state = DISABLED)
+
+    # log button
+    global node_log_button
+    node_log_button = Button(node_ui, text='Log', command=result.open_node_log)
+    node_log_button.grid(row=6, column=4)
+    node_log_button.configure(state=DISABLED)
 
     #loop tk
     mainloop()
