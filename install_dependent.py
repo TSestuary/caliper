@@ -13,14 +13,16 @@ import shutil
 path =  os.getcwd()
 script_path = os.path.join(path, 'utils/automation_scripts/Scripts')
 home_path = os.getcwd().split('/')
-caliper_output_path = os.sep + home_path[1] + os.sep + home_path[2] + os.sep + 'caliper_output'
+caliper_output_path = os.path.join(os.environ['HOME'], 'caliper_output')
 target_log_path = caliper_output_path + os.sep + 'target_export_log.txt'
 host_log_path = caliper_output_path + os.sep + 'host_export_log.txt'
 node_log_path = caliper_output_path + os.sep + 'TestNode_export_log.txt'
-log_file = [target_log_path, host_log_path, node_log_path]
+log_file = ['%s/target_dependency_output_summary.txt'%caliper_output_path, '%s/TestNode_dependency_output_summary.txt'%caliper_output_path, '%s/host_dependency_output_summary.txt'%caliper_output_path, target_log_path, host_log_path, node_log_path]
 for log in log_file:
     if os.path.exists(log):
         os.remove(log)
+
+os.system('export LANG=C')
 
 class Result():
     def __init__(self):
@@ -28,7 +30,7 @@ class Result():
     def target_result(self):
         self.top = Toplevel()
         self.top.title('target install result')
-        f = open('/%s/%s/caliper_output/target_dependency_output_summary.txt'%(home_path[1],home_path[2]))
+        f = open('%s/caliper_output/target_dependency_output_summary.txt'%os.environ['HOME'])
         lines = f.read().split('\n')
         for line in lines:
             line = line.replace('\n', '').replace('\t', '').replace('\t', '')
@@ -46,7 +48,7 @@ class Result():
     def node_result(self):
         self.top = Toplevel()
         self.top.title('node install result')
-        f = open('/%s/%s/caliper_output/TestNode_dependency_output_summary.txt'%(home_path[1],home_path[2]))
+        f = open('%s/caliper_output/TestNode_dependency_output_summary.txt'%os.environ['HOME'])
         lines = f.read().split('\n')
         for line in lines:
             line = line.replace('\n', '').replace('\t', '').replace('\t', '')
@@ -64,7 +66,7 @@ class Result():
     def host_result(self):
         self.top = Toplevel()
         self.top.title('host install result')
-        f = open('/%s/%s/caliper_output/host_dependency_output_summary.txt'%(home_path[1],home_path[2]))
+        f = open('%s/caliper_output/host_dependency_output_summary.txt'%os.environ['HOME'])
         lines = f.read().split('\n')
         for line in lines:
             line = line.replace('\n', '').replace('\t', '').replace('\t', '')
@@ -113,22 +115,27 @@ class install_dependency_thread(threading.Thread):
 
 
     def copy_key(self, dependency_ip_value, dependency_password_value):
-        ssh_check = os.popen('ls /%s/%s/.ssh/' % (home_path[1], home_path[2]))
+        ssh_check = os.popen('ls %s/.ssh/' % os.environ['HOME'])
         ssh_check = ssh_check.read()
         if '.pub' in ssh_check:
             try:
-                child = pexpect.spawn('ssh-copy-id -i /%s/%s/.ssh/id_rsa.pub root@%s'%(home_path[1], home_path[2], dependency_ip_value), timeout=5)
-                input_password = child.expect(["root", pexpect.TIMEOUT])
+                child = pexpect.spawn('ssh-copy-id -i %s/.ssh/id_rsa.pub root@%s'%(os.environ['HOME'], dependency_ip_value), timeout=5)
+                input_password = child.expect(["password", pexpect.TIMEOUT])
                 if input_password == 0:
                     child.sendline(dependency_password_value)
+                elif input_password == 1:
+                    display_line(self.display, '********************ssh copy time out***********************')
+                    f = open('%s/caliper_output/%s_dependency_output_summary.txt' % (os.environ['HOME'], self.dependency),'a')
+                    f.write('ERROR-IN-AUTOMATION:Fail to cp ssh key \n')
+                    f.close()
                 display_line(self.display, child.before)  # Print the result of the ls command.
             except pexpect.EOF , e:
                 display_line(self.display, e)
-                f = open('/%s/%s/caliper_output/%s_dependency_output_summary.txt' % (home_path[1], home_path[2], self.dependency), 'a+')
+                f = open('%s/caliper_output/%s_dependency_output_summary.txt' % (os.environ['HOME'], self.dependency), 'a+')
                 f.write('ERROR-IN-AUTOMATION:Fail to cp ssh key ')
                 f.close()
         else:
-            f = open('/%s/%s/caliper_output/%s_dependency_output_summary.txt' % (home_path[1], home_path[2], self.dependency), 'a+')
+            f = open('%s/caliper_output/%s_dependency_output_summary.txt' % (os.environ['HOME'], self.dependency), 'a+')
             f.write('ERROR-IN-AUTOMATION:No id_rsa.pub file')
             f.close()
 
@@ -167,12 +174,12 @@ class install_host_thread(threading.Thread):
 
         os.chdir(script_path)
         exec_log(host_text, self.command, host_log_path)
-        shutil.copyfile( os.path.join(script_path, 'host_dependency_dir/host_dependency_output_summary.txt'), '/%s/%s/caliper_output/host_dependency_output_summary.txt' % (home_path[1], home_path[2]))
-        ssh_check = os.popen('ls /%s/%s/.ssh/'%(home_path[1],home_path[2]))
+        shutil.copyfile( os.path.join(script_path, 'host_dependency_dir/host_dependency_output_summary.txt'), '%s/caliper_output/host_dependency_output_summary.txt' % (os.environ['HOME']))
+        ssh_check = os.popen('ls %s/.ssh/'%(os.environ['HOME']))
         ssh_check = ssh_check.read()
         if '.pub' not in ssh_check:
             try:
-                f = open('/%s/%s/caliper_output/host_dependency_output_summary.txt' % (home_path[1], home_path[2]),
+                f = open('%s/caliper_output/host_dependency_output_summary.txt' % (os.environ['HOME']),
                          'a+')
                 child = pexpect.spawn('ssh-keygen -t rsa', timeout=5)
                 except_co = child.expect(["Enter file in which to save the key", pexpect.TIMEOUT])
@@ -204,7 +211,7 @@ class install_host_thread(threading.Thread):
                 host_log = open(host_log_path)
                 host_log.write(e)
                 host_log.close()
-                f = open('/%s/%s/caliper_output/host_dependency_output_summary.txt' % (home_path[1], home_path[2]), 'a+')
+                f = open('%s/caliper_output/host_dependency_output_summary.txt' % (os.environ['HOME']), 'a+')
                 f.write('ERROR-IN-AUTOMATION:Fail to create ssh key ')
                 f.close()
         os.chdir(path)
@@ -241,7 +248,7 @@ def target_install():
     target_user_value = entries[0].get()
     target_ip_value = entries[1].get()
     target_password_value = password_entry.get()
-    run_command = './target_dependency.exp y %s %s %s /%s/%s'%(target_user_value, target_ip_value, target_password_value, home_path[1], home_path[2])
+    run_command = './target_dependency.exp y %s %s %s %s'%(target_user_value, target_ip_value, target_password_value, os.environ['HOME'])
     #Thread
     Thread_test = install_dependency_thread('target', target_text, run_command)
     Thread_test.start()
@@ -249,7 +256,7 @@ def target_install():
 def host_install():
     global host_pc_password_value
     host_pc_password_value = host_pc_password.get()
-    Thread_test = install_host_thread('./host_dependency.exp y %s'%host_pc_password_value)
+    Thread_test = install_host_thread('./host_dependency.exp y %s'%(host_pc_password_value))
     Thread_test.start()
 
 
@@ -258,7 +265,7 @@ def node_install():
     node_password_value = node_password_entry.get()
     node_user_value = node_entries[0].get()
     node_ip_value = node_entries[1].get()
-    Thread_test = install_dependency_thread('TestNode', node_text, './TestNode_dependency.exp y %s %s %s /%s/%s'%(node_user_value, node_ip_value, node_password_value, home_path[1], home_path[2]))
+    Thread_test = install_dependency_thread('TestNode', node_text, './TestNode_dependency.exp y %s %s %s %s'%(node_user_value, node_ip_value, node_password_value, os.environ['HOME']))
     Thread_test.start()
 
 

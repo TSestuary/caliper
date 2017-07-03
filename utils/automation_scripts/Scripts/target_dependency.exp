@@ -1,5 +1,5 @@
 #!/usr/bin/expect
-set timeout -1
+set timeout 10
 if {[llength $argv] == 0} {
      send_user "\nUsage: scriptname option client_name client_ip server_name server_ip \'password\' \n"
      exit 1
@@ -12,13 +12,16 @@ set passwd [lindex $argv 3]
 set path [lindex $argv 4]
 set i 0
 
+set timeout 60
 spawn scp target_dependency.sh $client_user@$client_ip:./
 expect {
     "Are you sure you want to continue connecting" { send "yes\r"; exp_continue}
     "assword" { send "[lindex $passwd ]\r";  exp_continue }
-    "100% " { send_user "\n\t\tSent target_dependency.sh successfully" }  
+    "100% " { send_user "\n\t\tSent target_dependency.sh successfully" }
+    timeout {puts "timeout!Maybe you are uisng OS other than English version. Please exec :export LANG=C";exit 1}
 }
 
+set timeout 1800
 set i 0
 #spawn ssh -t $client_user@$client_ip "sudo ./target_dependency.sh $option $mount_point"
 spawn ssh -t $client_user@$client_ip "sudo ./target_dependency.sh $option"
@@ -38,7 +41,7 @@ while true {
 		timeout {
 			send_user "U have not selected any choice:"
 			send_user "I will be exiting\n"
-			exit 1
+			break
 		}
 		eof {
 			send_user "target dependency satisfied.\n"
@@ -49,9 +52,10 @@ while true {
 
 	}
 }
-
+set timeout 60
 spawn scp $client_user@$client_ip:~/target_dependency_dir/target_dependency_output_summary.txt $path/caliper_output/target_dependency_output_summary.txt
 expect {
     "$client_user@$client_ip's password: " {send "[lindex $passwd ]\r";  exp_continue}
+    timeout {puts "timeout!Maybe you are uisng OS other than English version. Please exec :export LANG=C";exit 1}
 }
 
