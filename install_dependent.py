@@ -22,8 +22,6 @@ for log in log_file:
     if os.path.exists(log):
         os.remove(log)
 
-os.system('export LANG=C')
-
 class Result():
     def __init__(self):
         pass
