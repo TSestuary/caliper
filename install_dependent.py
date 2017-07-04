@@ -102,7 +102,7 @@ class download(threading.Thread):
     def clone(self):
         # os.system('git clone https://github.com/TSestuary/caliper.git')
         display_line(host_text, "Cloning into 'caliper'...")
-        exec_log(host_text, 'git clone https://github.com/TSestuary/caliper.git', host_log_path)
+        exec_log(host_text, 'git clone https://github.com/Putter/caliper.git', host_log_path)
 
     '''install caliper'''
     def install_caliper(self):
@@ -184,8 +184,7 @@ class download(threading.Thread):
         elif '14.04' in version:
             self.run_install()
         else:
-            self.run_install()
-            print 'OS version error'
+            display_line(host_text, 'OS error : caliper only support 16.04 and 14.04')
         host_install_button.configure(state=NORMAL)
 
 class install_dependency_thread(threading.Thread):
