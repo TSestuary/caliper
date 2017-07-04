@@ -23,6 +23,12 @@ clear
 echo "HOST"
 
 echo "HOST DEPENDENCY"
+
+echo "INSTALL CALIPER ......"
+cd ../../../../
+sudo python setup.py install
+cd utils/automation_scripts/Scripts/host_dependency_dir
+
 for i in `seq 0 $((${#host_packages[@]}-1)) `
 do
 	#chcking to see if all the host dependent packages are installed

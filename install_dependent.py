@@ -2,17 +2,18 @@
 #-*- encoding:UTF-8 -*-
 
 import os
+import time
 from Tkinter import *
 import tkMessageBox
 import ttk
-import threading
+import threading,thread
 from subprocess import Popen, PIPE
 import pexpect
 import shutil
+import subprocess
 
 path =  os.getcwd()
-script_path = os.path.join(path, 'utils/automation_scripts/Scripts')
-home_path = os.getcwd().split('/')
+script_path = os.path.join(path, 'caliper/utils/automation_scripts/Scripts')
 caliper_output_path = os.path.join(os.environ['HOME'], 'caliper_output')
 target_log_path = caliper_output_path + os.sep + 'target_export_log.txt'
 host_log_path = caliper_output_path + os.sep + 'host_export_log.txt'
@@ -21,7 +22,6 @@ log_file = ['%s/target_dependency_output_summary.txt'%caliper_output_path, '%s/T
 for log in log_file:
     if os.path.exists(log):
         os.remove(log)
-
 
 class Result():
     def __init__(self):
@@ -80,6 +80,114 @@ class Result():
         tkMessageBox.showinfo("host log", "host log path : %s" % host_log_path)
         # os.system("gedit '%s'"%host_log_path)
 
+class download(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+
+    '''creat caliper_outpt folder for collect caliper log and result'''
+    def create_dir(self, mode=0755):
+        CALIPER_TMP_DIR = os.path.join(os.environ['HOME'], 'caliper_output')
+        if not os.path.exists(CALIPER_TMP_DIR):
+            os.makedirs(CALIPER_TMP_DIR, mode)
+
+    '''check os version, caliper only support 16.04 and 14.04'''
+    def check_version(self):
+        version = os.popen('cat /etc/issue').read()
+        if '16.04' or '14.04' in version:
+            pass
+        else:
+            print 'fail'
+
+    '''download caliper code'''
+    def clone(self):
+        # os.system('git clone https://github.com/TSestuary/caliper.git')
+        display_line(host_text, "Cloning into 'caliper'...")
+        exec_log(host_text, 'git clone https://github.com/TSestuary/caliper.git', host_log_path)
+
+    '''install caliper'''
+    def install_caliper(self):
+        os.chdir('caliper')
+        print os.getcwd()
+        os.system('git branch -a')
+        os.system('git checkout download_caliper')
+        os.system('git branch -a')
+        # caliper_install = pexpect.spawn('sudo python setup.py install', timeout=5)
+        # install_caliper = caliper_install.expect(["[sudo]", pexpect.TIMEOUT])
+        # if install_caliper == 0:
+        #     try:
+        #         caliper_install.sendline(sys.argv[1])
+        #         print caliper_install.readlines()
+        #     except pexpect.EOF , e:
+        #          print e
+        # elif install_caliper == 1:
+        #     pass
+
+    def judge_tool_installed(self, tool):
+        try:
+            output = subprocess.Popen('which %s'%tool, shell=True, stdout=subprocess.PIPE)
+        except Exception:
+            return 0
+        else:
+            if output.stdout.readlines():
+                return 1
+            else:
+                return 0
+
+    def judge_dependent_installed(self, tool):
+        try:
+            output = os.popen("dpkg-query -W -f='${Status}' %s | grep -c "+'"ok installed"'%tool).read()
+        except Exception:
+            return 0
+        else:
+            if '0' in output:
+                return 0
+            else:
+                return 1
+
+    def install_python(self):
+        os.system('sudo apt-get update')
+        os.system('sudo apt-get -f install python-dev')
+
+    def install_git(self):
+        os.system('sudo apt-get update')
+        os.system('sudo apt-get -f install git')
+
+    def run_install(self):
+        tool_list = ['python', 'git']
+        for tool in tool_list:
+            flag = self.judge_tool_installed(tool)
+            if flag != 1:
+                try:
+                    update_apt = pexpect.spawn('sudo apt-get update', timeout=5)
+                    input_password = update_apt.expect(["[sudo]", pexpect.TIMEOUT])
+                    if input_password == 0:
+                        try:
+                            update_apt.sendline(host_pc_password_value)
+                        except pexpect.EOF, e:
+                            print e
+                    elif input_password == 1:
+                        pass
+                    if tool == 'python':
+                        os.system('sudo apt-get -f install python-dev')
+                    else:
+                        os.system('sudo apt-get -f install %s' % tool)
+                except OSError, e:
+                    print e
+        self.clone()
+        self.install_caliper()
+
+    def run(self):
+        version = os.popen('cat /etc/issue').read().replace('\n','')
+        print version
+        if '16.04' in version:
+            self.run_install()
+        elif '14.04' in version:
+            self.run_install()
+        else:
+            self.run_install()
+            print 'OS version error'
+        host_install_button.configure(state=NORMAL)
+
 class install_dependency_thread(threading.Thread):
     def __init__(self, dependency, display, run_command):
         threading.Thread.__init__(self)
@@ -122,20 +230,23 @@ class install_dependency_thread(threading.Thread):
                 input_password = child.expect(["password", pexpect.TIMEOUT])
                 if input_password == 0:
                     child.sendline(dependency_password_value)
+                    # child.sendline(dependency_password_value+'\r')
                 elif input_password == 1:
                     display_line(self.display, '********************ssh copy time out***********************')
                     f = open('%s/caliper_output/%s_dependency_output_summary.txt' % (os.environ['HOME'], self.dependency),'a')
                     f.write('ERROR-IN-AUTOMATION:Fail to cp ssh key \n')
                     f.close()
+                print child.after
+                print child.before
                 display_line(self.display, child.before)  # Print the result of the ls command.
             except pexpect.EOF , e:
                 display_line(self.display, e)
-                f = open('%s/caliper_output/%s_dependency_output_summary.txt' % (os.environ['HOME'], self.dependency), 'a+')
-                f.write('ERROR-IN-AUTOMATION:Fail to cp ssh key ')
+                f = open('%s/caliper_output/%s_dependency_output_summary.txt' % (os.environ['HOME'], self.dependency), 'a')
+                f.write('ERROR-IN-AUTOMATION:Fail to cp ssh key \n')
                 f.close()
         else:
-            f = open('%s/caliper_output/%s_dependency_output_summary.txt' % (os.environ['HOME'], self.dependency), 'a+')
-            f.write('ERROR-IN-AUTOMATION:No id_rsa.pub file')
+            f = open('%s/caliper_output/%s_dependency_output_summary.txt' % (os.environ['HOME'], self.dependency), 'a')
+            f.write('ERROR-IN-AUTOMATION:No id_rsa.pub file\n')
             f.close()
 
 class install_host_thread(threading.Thread):
@@ -174,6 +285,7 @@ class install_host_thread(threading.Thread):
         os.chdir(script_path)
         exec_log(host_text, self.command, host_log_path)
         shutil.copyfile( os.path.join(script_path, 'host_dependency_dir/host_dependency_output_summary.txt'), '%s/caliper_output/host_dependency_output_summary.txt' % (os.environ['HOME']))
+        print 'key'
         ssh_check = os.popen('ls %s/.ssh/'%(os.environ['HOME']))
         ssh_check = ssh_check.read()
         if '.pub' not in ssh_check:
@@ -255,7 +367,7 @@ def target_install():
 def host_install():
     global host_pc_password_value
     host_pc_password_value = host_pc_password.get()
-    Thread_test = install_host_thread('./host_dependency.exp y %s'%(host_pc_password_value))
+    Thread_test = install_host_thread('./host_dependency.exp y %s'%host_pc_password_value)
     Thread_test.start()
 
 
@@ -267,6 +379,9 @@ def node_install():
     Thread_test = install_dependency_thread('TestNode', node_text, './TestNode_dependency.exp y %s %s %s %s'%(node_user_value, node_ip_value, node_password_value, os.environ['HOME']))
     Thread_test.start()
 
+def download_code():
+    download_code = download()
+    download_code.start()
 
 if __name__ == "__main__":
     master = Tk()
@@ -331,10 +446,15 @@ if __name__ == "__main__":
     host_pc_password = Entry(host_ui, width=screenwidth/50, show = '*')
     host_pc_password.grid(row=0, column=1, sticky=W)
 
+    # Download button
+    download_button = Button(host_ui, text='download caliper', command=download_code)
+    download_button.grid(row=6, column=1, sticky=E)
+
     #Install button
     global host_install_button
     host_install_button = Button(host_ui, text='Install', command=host_install)
     host_install_button.grid(row=6, column=2)
+    host_install_button.configure(state=DISABLED)
 
     #View result button
     global host_view_button
