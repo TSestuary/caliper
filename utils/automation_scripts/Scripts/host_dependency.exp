@@ -1,5 +1,5 @@
 #!/usr/bin/expect
-set timeout  -1
+set timeout  1800
 set option [ lindex $argv 0 ]
 set passwd [ lindex $argv 1 ]
 
