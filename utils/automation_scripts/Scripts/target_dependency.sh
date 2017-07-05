@@ -1,19 +1,18 @@
 #!/bin/bash
 
 target_dependency="target_dependency_dir"
-
+echo "target finished mkdir"
 if [ ! -d $target_dependency ]
 then
         sudo mkdir -p $target_dependency
 fi
 cd $target_dependency
-
 file_present=target_dependency_output_summary.txt
 if [ -f $file_present ]
 then
     sudo rm target_dependency_output_summary.txt
 fi
-
+echo "target finished rm target_dependency_output_summary"
 ERROR="ERROR-IN-AUTOMATION"
 UPDATE=0
 clear
@@ -78,6 +77,7 @@ then
         else
            echo "${target_packages[$i]} is installed" >>  target_dependency_output_summary.txt
         fi
+        echo "target finished install ${target_packages[$i]}"
     done
 else
     if [ ! $architecture_x86_64 -eq 0 ]
@@ -124,16 +124,18 @@ else
         else
            echo "${target_packages[$i]} is installed" >> target_dependency_output_summary.txt
         fi
+        echo "target finished install ${target_packages[$i]}"
     done
 
 	if [ $choice == 'y' ]
 	then
-                if [ ! `sudo find /usr/local/mysql/bin -name mysql` ];
+        if [ ! `sudo find /usr/local/mysql/bin -name mysql` ];
 		then
                         echo "install mysql-server manually..." >> target_dependency_output_summary.txt
 		else
 		        echo "mysql is installed" >> target_dependency_output_summary.txt
 		fi
+		echo "target finished set mysql"
 		if [ ! `sudo find /usr/local/bin -name stress` ];
 		then
 		        echo "installing stress..." >> target_dependency_output_summary.txt
@@ -145,7 +147,7 @@ else
 		else
 		        echo "stress is installed" >>  target_dependency_output_summary.txt
 		fi
-
+        echo "target finished set stress"
 		if [ ! `sudo find /usr/bin -name stress-ng` ];
 		then
 		        echo "installing stress-ng..." >> target_dependency_output_summary.txt
@@ -157,6 +159,7 @@ else
 		else
 		        echo "stress-ng is installed" >> target_dependency_output_summary.txt
 		fi
+		echo "target finished set stress-ng"
 	fi
 fi
 #mount a disk partition for storage testing
@@ -194,3 +197,4 @@ then
         echo -e "\n\t\t$ERROR:Failed to cp the perf path" >> target_dependency_output_summary.txt
     fi
 fi
+echo "target finished copying the perf"

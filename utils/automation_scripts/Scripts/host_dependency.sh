@@ -1,7 +1,7 @@
 #!/bin/bash
 
 host_dependency="host_dependency_dir"
-
+echo "host finished mk host_dependency_dir dir"
 if [ ! -d $host_dependency ]
 then
 	sudo mkdir -p $host_dependency
@@ -13,7 +13,7 @@ if [ -f $file_present ]
 then
     sudo rm host_dependency_output_summary.txt
 fi
-
+echo "host finished rm host_dependency_output_summary.txt"
 host_packages=('libc6' 'libncurses5' 'libstdc++6' 'lib32z1' 'python-dev' 'nfs-common' 'build-essential' 'python-pip' 'automake' 'autoconf' 'make' 'openssh-server' 'libnuma-dev' 'texinfo' 'python-matplotlib' 'python-numpy' 'nfs-kernel-server' 'openjdk-7-jre' 'openjdk-7-jdk' 'lib32stdc++6' 'bzr' 'gfortran')
 
 NFS_mount="/mnt/caliper_nfs/ltp_log"
@@ -23,12 +23,11 @@ clear
 echo "HOST"
 
 echo "HOST DEPENDENCY"
-
 echo "INSTALL CALIPER ......"
 cd ../../../../
 sudo python setup.py install
 cd utils/automation_scripts/Scripts/host_dependency_dir
-
+echo "host finished install caliper"
 for i in `seq 0 $((${#host_packages[@]}-1)) `
 do
 	#chcking to see if all the host dependent packages are installed
@@ -67,6 +66,7 @@ do
     else
        echo "${host_packages[$i]} is installed" >> host_dependency_output_summary.txt
     fi
+    echo "host finished install ${host_packages[$i]}"
 done
 
 host_pip_packages=('Django' 'numpy' 'matplotlib' 'openpyxl')
@@ -113,6 +113,7 @@ do
      else
        echo "${host_pip_packages[$i]} is installed" >> host_dependency_output_summary.txt
      fi
+     echo "host finished install ${host_pip_packages[$i]}"
 done
 
 check=`sudo find /usr/local/lib -name libpcre.so | grep -c libpcre.so`
@@ -124,6 +125,7 @@ if [ $check -ne 1 ];then
     make -j32
     sudo make install
 fi
+echo "host finished install pcre"
 
 #NFS mount requirements
 if [ ! -d $NFS_mount ]
@@ -134,6 +136,7 @@ then
 		echo "$ERROR:NFS MOUNTING FAILED" >> host_dependency_output_summary.txt
 	fi
 fi
+echo "host finished mount requirements"
 sudo chmod -R 775 /mnt/caliper_nfs/ltp_log
 if [ $? -ne 0 ]
 then
@@ -144,7 +147,7 @@ if [ $? -ne 0 ]
 then
 	echo "$ERROR:NFS OWNER SETTING FAILED" >> host_dependency_output_summary.txt
 fi
-
+echo "host finished NFS OWNER SETTING"
 #exporting the path for NFS mounting
 flag=0
 #command="/opt/caliper_nfs *(rw,sync,no_root_squash)"
@@ -158,7 +161,7 @@ then
         flag=1
     fi
 fi
-
+echo "host finished exporting the path for NFS mounting"
 if [ $flag -eq 1 ]
 then
     echo "The path for NFS point is exported properly"
@@ -183,7 +186,7 @@ else
        echo -e "\n\t\tPlease export the path in /etc/export and try again" >> host_dependency_output_summary.txt
     fi
 fi
-
+echo "host finished"
 #Restaring the nfs-kernal-service
 echo "Restarting nfs-kernel-server"
 sudo service nfs-kernel-server restart
@@ -191,4 +194,4 @@ if [ $? -ne 0 ]
 then
 	echo -e "\n\t\t$ERROR:RESTARTING THE NFS_KERNEL Failed" >> host_dependency_output_summary.txt
 fi
-
+echo "host finished restaring the nfs-kernal-service"

@@ -12,6 +12,7 @@ if [ ! -d $TestNode_dependency ]
 then
     sudo mkdir -p $TestNode_dependency
 fi
+echo "TestNode successful mk dir"
 cd $TestNode_dependency
 
 file_present=TestNode_dependency_output_summary.txt
@@ -19,7 +20,7 @@ if [ -f $file_present ]
 then
     sudo rm TestNode_dependency_output_summary.txt
 fi
-
+echo "TestNode successful rm TestNode_dependency_output_summary.txt"
 logpath="$HOME/$TestNode_dependency/$file_present"
 ERROR="ERROR-IN-AUTOMATION"
 dependency=('qperf' 'netperf' 'iperf3')
@@ -128,6 +129,7 @@ do
                 fi
             fi
         fi
+    echo "TestNode successful install ${dependency[$i]}"
 done
 
 if [ ! -f ~/caliper_redis/redis_benchmark ];then
@@ -138,7 +140,7 @@ if [ ! -f ~/caliper_redis/redis_benchmark ];then
     mkdir ~/caliper_redis
     cp redis-benchmark redis-cli ~/caliper_redis/
 fi
-
+echo "TestNode successful install redis"
 for i in `seq 0 $((${#flag[@]}-1)) ` 
 do    
     j=${flag[$i]}
@@ -169,5 +171,6 @@ do
                 exit 1
             fi
         fi
-   fi         
+   fi
+   echo "TestNode successful start netserver"
 done

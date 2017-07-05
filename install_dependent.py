@@ -107,7 +107,6 @@ class download(threading.Thread):
     '''install caliper'''
     def install_caliper(self):
         os.chdir('caliper')
-        print os.getcwd()
         os.system('git branch -a')
         os.system('git checkout download_caliper')
         os.system('git branch -a')
@@ -201,7 +200,7 @@ class install_dependency_thread(threading.Thread):
             target_install_button.configure(state=DISABLED)
             os.chdir(script_path)
             exec_log(self.display, self.command, target_log_path)
-            self.copy_key(target_ip_value, target_password_value)
+            # self.copy_key(target_ip_value, target_password_value)
             target_log_button.configure(state=NORMAL)
             target_install_button.configure(state=NORMAL)
             target_view_button.configure(state=NORMAL)
@@ -212,13 +211,12 @@ class install_dependency_thread(threading.Thread):
             node_install_button.configure(state=DISABLED)
             os.chdir(script_path)
             exec_log(self.display, self.command, node_log_path)
-            self.copy_key(node_ip_value, node_password_value)
+            # self.copy_key(node_ip_value, node_password_value)
             node_view_button.configure(state=NORMAL)
             node_install_button.configure(state=NORMAL)
             node_log_button.configure(state=NORMAL)
             display_line(node_text, '*******************Install finished**********************')
         os.chdir(path)
-
 
     def copy_key(self, dependency_ip_value, dependency_password_value):
         ssh_check = os.popen('ls %s/.ssh/' % os.environ['HOME'])
@@ -284,7 +282,6 @@ class install_host_thread(threading.Thread):
         os.chdir(script_path)
         exec_log(host_text, self.command, host_log_path)
         shutil.copyfile( os.path.join(script_path, 'host_dependency_dir/host_dependency_output_summary.txt'), '%s/caliper_output/host_dependency_output_summary.txt' % (os.environ['HOME']))
-        print 'key'
         ssh_check = os.popen('ls %s/.ssh/'%(os.environ['HOME']))
         ssh_check = ssh_check.read()
         if '.pub' not in ssh_check:
@@ -341,12 +338,18 @@ def exec_log(display, command, text):
                 print line
                 display_line(display, line)
                 f.write(line)
+                if 'host finished' in line:
+                    gpw_pb_ivar.set(gpw_pb_ivar.get() + 1)
+                if 'target finished' in line:
+                    target_gpw_pb_ivar.set(target_gpw_pb_ivar.get() + 1)
+                if 'TestNode successful' in line:
+                    node_gpw_pb_ivar.set(node_gpw_pb_ivar.get() + 1)
     except OSError, e:
         display_line(display, e)
         f.write(e)
 
 def display_line(display, line):
-    display.grid(row=8, column=0, columnspan=10, rowspan=10, sticky=W+E+N+S)
+    display.grid(row=9, column=0, columnspan=10, rowspan=10, sticky=W+E+N+S)
     display.insert(INSERT, "%s\n" % line)
     display.see(END)
     display.update()
@@ -366,7 +369,7 @@ def target_install():
 def host_install():
     global host_pc_password_value
     host_pc_password_value = host_pc_password.get()
-    Thread_test = install_host_thread('./host_dependency.exp y %s'%host_pc_password_value)
+    Thread_test = install_host_thread('./host_dependency.exp y %s'%(host_pc_password_value))
     Thread_test.start()
 
 
@@ -386,9 +389,7 @@ if __name__ == "__main__":
     master = Tk()
     var = IntVar()
     master.resizable(0, 0)
-    screenwidth = master.winfo_screenwidth()
-    screenheight = master.winfo_screenheight()
-    master.geometry('%dx%d'%(screenwidth/3, screenheight/2))
+    master.geometry('%dx%d'%(640, 600))
     master.title('Caliper Install GUI')
 
     #create note book
@@ -412,11 +413,11 @@ if __name__ == "__main__":
     # i value is:target_user, target_ip, target_password, disk_name
     for i in range(0,2):
         akt_bb = StringVar()
-        entry = Entry(target_ui, width=screenwidth/50)
+        entry = Entry(target_ui, width=38)
         entry.grid(row=i, column=1, sticky=W)
         entries.append(entry)
 
-    password_entry = Entry(target_ui, width=screenwidth/50, show = '*')
+    password_entry = Entry(target_ui, width=38, show = '*')
     password_entry.grid(row=2, column=1, sticky=W)
 
     #Install button
@@ -437,12 +438,19 @@ if __name__ == "__main__":
     target_log_button.grid(row=6, column=4)
     target_log_button.configure(state=DISABLED)
 
+    global target_gpw_pb_ivar
+    target_var = IntVar()
+    target_gpw_pb_ivar = target_var
+    target_gpw_pb_ivar.set(0)
+    target_progressbar = ttk.Progressbar(target_ui, mode='determinate', maximum=29, variable=target_gpw_pb_ivar)
+    target_progressbar.grid(row=8, column=0, columnspan=10, rowspan=1, sticky=W + E + N + S)
+
     #make host ui
     Label(host_ui, text="host pc password: ").grid(sticky=W)
 
     #weight layout
     # package_installation_choice.grid(row=0, column=1, sticky=W)
-    host_pc_password = Entry(host_ui, width=screenwidth/50, show = '*')
+    host_pc_password = Entry(host_ui, width=38, show = '*')
     host_pc_password.grid(row=0, column=1, sticky=W)
 
     # Download button
@@ -467,11 +475,18 @@ if __name__ == "__main__":
     host_log_button.grid(row=6, column=4)
     host_log_button.configure(state=DISABLED)
 
+    global gpw_pb_ivar
+    gpw_pb_ivar = var
+    gpw_pb_ivar.set(0)
+    progressbar = ttk.Progressbar(host_ui, mode='determinate', maximum = 34, variable = gpw_pb_ivar)
+    progressbar.grid(row=8, column=0, columnspan=10, rowspan=1, sticky=W+E+N+S)
+
+
     #
     global host_text, target_text, node_text
-    host_text = Text(host_ui, height=screenheight/35, wrap=WORD)
-    target_text = Text(target_ui, height=screenheight/35, wrap=WORD)
-    node_text = Text(node_ui, height=screenheight/35, wrap=WORD)
+    host_text = Text(host_ui, height=32, wrap=WORD)
+    target_text = Text(target_ui, height=32, wrap=WORD)
+    node_text = Text(node_ui, height=32, wrap=WORD)
 
     #make node ui
     #weight layout
@@ -483,11 +498,11 @@ if __name__ == "__main__":
     node_entries = []
     # i value is:target_user, target_ip, target_password, disk_name
     for i in range(0,2):
-        node_entry = Entry(node_ui, width=screenwidth/50)
+        node_entry = Entry(node_ui, width=38)
         node_entry.grid(row=i, column=1, sticky=W)
         node_entries.append(node_entry)
 
-    node_password_entry = Entry(node_ui, width=screenwidth/50, show = '*')
+    node_password_entry = Entry(node_ui, width=38, show = '*')
     node_password_entry.grid(row=2, column=1, sticky=W)
 
     #Install button
@@ -507,6 +522,13 @@ if __name__ == "__main__":
     node_log_button = Button(node_ui, text='Log', command=result.open_node_log)
     node_log_button.grid(row=6, column=4)
     node_log_button.configure(state=DISABLED)
+
+    global node_gpw_pb_ivar
+    node_var = IntVar()
+    node_gpw_pb_ivar = node_var
+    node_gpw_pb_ivar.set(0)
+    target_progressbar = ttk.Progressbar(node_ui, mode='determinate', maximum=9, variable=node_gpw_pb_ivar)
+    target_progressbar.grid(row=8, column=0, columnspan=10, rowspan=1, sticky=W + E + N + S)
 
     #loop tk
     mainloop()
