@@ -18,7 +18,7 @@ expect {
     "Are you sure you want to continue connecting" { send "yes\r"; exp_continue}
     "assword" { send "[lindex $passwd ]\r";  exp_continue }
     "100% " { send_user "\n\t\tSent target_dependency.sh successfully" }
-    timeout {puts "timeout!Maybe you are uisng OS other than English version. Please exec :export LANG=C";exit 1}
+    timeout {puts "timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C";exit 1}
 }
 
 set timeout 1800
@@ -56,6 +56,13 @@ set timeout 60
 spawn scp $client_user@$client_ip:~/target_dependency_dir/target_dependency_output_summary.txt $path/caliper_output/target_dependency_output_summary.txt
 expect {
     "$client_user@$client_ip's password: " {send "[lindex $passwd ]\r";  exp_continue}
-    timeout {puts "timeout!Maybe you are uisng OS other than English version. Please exec :export LANG=C";exit 1}
+    timeout {puts "timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C";exit 1}
+}
+
+set timeout 60
+spawn ssh-copy-id -i $path/.ssh/id_rsa.pub root@$client_ip
+expect {
+    "password: " {send "[lindex $passwd ]\r";  exp_continue}
+    timeout {puts "timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C";exit 1}
 }
 

@@ -17,7 +17,7 @@ expect {
     "Are you sure you want to continue connecting" { send "yes\r"; exp_continue}
     "assword: " { send "[lindex $passwd]\r"; exp_continue }
     "100% " { send_user "\n\t\tSent TestNode_dependency.sh successfully" }
-    timeout {puts "timeout!Maybe you are uisng OS other than English version. Please exec :export LANG=C";exit 1}
+    timeout {puts "timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C";exit 1}
 }
 
 set i 0
@@ -53,6 +53,12 @@ set timeout 60
 spawn scp $TestNode_user@$TestNode_ip:~/TestNode_dependency_dir/TestNode_dependency_output_summary.txt $path/caliper_output/TestNode_dependency_output_summary.txt
 expect {
     "password" {send "[lindex $passwd ]\r";  exp_continue}
-    timeout {puts "timeout!Maybe you are uisng OS other than English version. Please exec :export LANG=C";exit 1}
+    timeout {puts "timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C";exit 1}
 }
 
+set timeout 60
+spawn ssh-copy-id -i $path/.ssh/id_rsa.pub root@$TestNode_ip
+expect {
+    "password: " {send "[lindex $passwd ]\r";  exp_continue}
+    timeout {puts "timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C";exit 1}
+}

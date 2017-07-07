@@ -1,7 +1,8 @@
 #!/usr/bin/expect
 set timeout  1800
 set option [ lindex $argv 0 ]
-set passwd [ lindex $argv 1 ]
+set hostuser [ lindex $argv 1 ]
+set passwd [ lindex $argv 2 ]
 
 set i 0
 spawn sudo ./host_dependency.sh $option
@@ -25,7 +26,7 @@ while true {
 			send_user "HOST FAILED"
 			exit 1
 		}
-		timeout {puts "timeout!Maybe you are uisng chinese OS. Please exec :export LANG=C";exit 1}
+		timeout {puts "timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C";exit 1}
 		eof { 
 			send_user "host dependency satisfied.\n"
 			break
