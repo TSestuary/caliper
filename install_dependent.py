@@ -10,11 +10,19 @@ import threading,thread
 from subprocess import Popen, PIPE
 import pexpect
 import shutil
-import subprocess
 
 path =  os.getcwd()
-script_path = os.path.join(path, 'caliper/utils/automation_scripts/Scripts')
+if os.path.exists(os.path.join(path, 'caliper')):
+    if os.path.isfile(os.path.join(path, 'caliper')):
+        script_path = os.path.join(path, 'utils/automation_scripts/Scripts')
+    else:
+        script_path = os.path.join(path, 'caliper/utils/automation_scripts/Scripts')
+else:
+    script_path = os.path.join(path, 'Scripts')
+
 caliper_output_path = os.path.join(os.environ['HOME'], 'caliper_output')
+if not os.path.exists(caliper_output_path):
+    os.makedirs(caliper_output_path,0775)
 target_log_path = caliper_output_path + os.sep + 'target_export_log.txt'
 host_log_path = caliper_output_path + os.sep + 'host_export_log.txt'
 node_log_path = caliper_output_path + os.sep + 'TestNode_export_log.txt'
@@ -90,14 +98,6 @@ class download(threading.Thread):
         if not os.path.exists(CALIPER_TMP_DIR):
             os.makedirs(CALIPER_TMP_DIR, mode)
 
-    '''check os version, caliper only support 16.04 and 14.04'''
-    def check_version(self):
-        version = os.popen('cat /etc/issue').read()
-        if '16.04' or '14.04' in version:
-            pass
-        else:
-            print 'fail'
-
     '''download caliper code'''
     def clone(self):
         # os.system('git clone https://github.com/TSestuary/caliper.git')
@@ -111,10 +111,10 @@ class download(threading.Thread):
         os.system('git checkout download_caliper')
         os.system('git branch -a')
         # caliper_install = pexpect.spawn('sudo python setup.py install', timeout=5)
-        # install_caliper = caliper_install.expect(["[sudo]", pexpect.TIMEOUT])
+        # install_caliper = caliper_install.expect(["password", pexpect.TIMEOUT])
         # if install_caliper == 0:
         #     try:
-        #         caliper_install.sendline(sys.argv[1])
+        #         caliper_install.sendline(host_pc_password_value)
         #         print caliper_install.readlines()
         #     except pexpect.EOF , e:
         #          print e
@@ -123,7 +123,7 @@ class download(threading.Thread):
 
     def judge_tool_installed(self, tool):
         try:
-            output = subprocess.Popen('which %s'%tool, shell=True, stdout=subprocess.PIPE)
+            output = Popen('which %s'%tool, shell=True, stdout=PIPE)
         except Exception:
             return 0
         else:
@@ -143,48 +143,64 @@ class download(threading.Thread):
             else:
                 return 1
 
-    def install_python(self):
-        os.system('sudo apt-get update')
-        os.system('sudo apt-get -f install python-dev')
-
-    def install_git(self):
-        os.system('sudo apt-get update')
-        os.system('sudo apt-get -f install git')
-
     def run_install(self):
         tool_list = ['python', 'git']
         for tool in tool_list:
             flag = self.judge_tool_installed(tool)
             if flag != 1:
                 try:
-                    update_apt = pexpect.spawn('sudo apt-get update', timeout=5)
-                    input_password = update_apt.expect(["[sudo]", pexpect.TIMEOUT])
-                    if input_password == 0:
-                        try:
+                    display_line(host_text, "apt-get update")
+                    update_apt = pexpect.spawn('sudo apt-get update', timeout=60)
+                    try:
+                        input_password = update_apt.expect(["[sudo]"])
+                        if input_password == 0:
                             update_apt.sendline(host_pc_password_value)
-                        except pexpect.EOF, e:
-                            print e
-                    elif input_password == 1:
-                        pass
-                    if tool == 'python':
-                        os.system('sudo apt-get -f install python-dev')
-                    else:
-                        os.system('sudo apt-get -f install %s' % tool)
+                    except pexpect.TIMEOUT:
+                        display_line(host_text,
+                                     'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
+                    display_line(host_text, "install %s" % tool)
+                    update_tool = pexpect.spawn('sudo apt-get install %s' % tool, timeout=60)
+                    try:
+                        input_password = update_tool.expect(["[sudo]"])
+                        if input_password == 0:
+                            update_tool.sendline(host_pc_password_value)
+                            for line in update_tool.readlines():
+                                print line
+                                display_line(host_text, line)
+                    except pexpect.TIMEOUT:
+                        display_line(host_text, 'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
+                    try:
+                        input_c = update_tool.expect(["continue?"], timeout=60)
+                        if input_c == 0:
+                            update_tool.sendline("Y")
+                            for line in update_tool.readlines():
+                                print line
+                                display_line(host_text, line)
+                    except pexpect.TIMEOUT:
+                        display_line(host_text, 'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
                 except OSError, e:
                     print e
+                    pass
+        time.sleep(60)
         self.clone()
         self.install_caliper()
+        display_line(host_text, '*******************Download finished**********************')
 
     def run(self):
         version = os.popen('cat /etc/issue').read().replace('\n','')
         print version
+        display_line(host_text, version)
+        global host_pc_password_value
+        host_pc_password_value = host_pc_password.get()
+        # check os version, caliper only support ubuntu 16.04 and ubuntu 14.04
         if '16.04' in version:
             self.run_install()
+            host_install_button.configure(state=NORMAL)
         elif '14.04' in version:
             self.run_install()
+            host_install_button.configure(state=NORMAL)
         else:
-            display_line(host_text, 'OS error : caliper only support 16.04 and 14.04')
-        host_install_button.configure(state=NORMAL)
+            display_line(host_text, 'OS error : caliper only support ubuntu 16.04 and ubuntu 14.04')
 
 class install_dependency_thread(threading.Thread):
     def __init__(self, dependency, display, run_command):
@@ -224,7 +240,7 @@ class install_dependency_thread(threading.Thread):
         if '.pub' in ssh_check:
             try:
                 child = pexpect.spawn('ssh-copy-id -i %s/.ssh/id_rsa.pub root@%s'%(os.environ['HOME'], dependency_ip_value), timeout=5)
-                input_password = child.expect(["password", pexpect.TIMEOUT])
+                input_password = child.expect(["sudo", pexpect.TIMEOUT])
                 if input_password == 0:
                     child.sendline(dependency_password_value)
                     # child.sendline(dependency_password_value+'\r')
@@ -252,33 +268,35 @@ class install_host_thread(threading.Thread):
         self.command = run_command
 
     def run(self):
+        global host_pc_password_value
+        host_pc_password_value = host_pc_password.get()
         host_view_button.configure(state=DISABLED)
         host_install_button.configure(state=DISABLED)
         host_log_button.configure(state=DISABLED)
         #check expect
-        expect_check = os.popen("dpkg-query -W -f='${Status}' expect | grep -c "+'"ok installed"')
-        expect_check = expect_check.read().replace('\n', '')
-        print expect_check
-        if int(expect_check) != 1:
+        output = Popen('which expect', shell=True, stdout=PIPE)
+        if not output.stdout.readlines():
             display_line(host_text, 'Install expect......')
-            expect_install = pexpect.spawn('sudo apt-get install expect', timeout=5)
+            expect_install = pexpect.spawn('sudo apt-get install expect', timeout=60)
             try:
                 install_expect = expect_install.expect(["[sudo]", pexpect.TIMEOUT])
                 if install_expect == 0:
                     expect_install.sendline(host_pc_password_value)
                     display_line(host_text, expect_install.before)
-                install_yes = expect_install.expect(["Do you want to continue", pexpect.TIMEOUT])
+            except pexpect.TIMEOUT:
+                display_line(host_text,
+                            'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
+            try:
+                install_yes = expect_install.expect(["continue?", pexpect.TIMEOUT])
                 if install_yes == 0:
                     expect_install.sendline('y')
                     display_line(host_text, expect_install.before)
-                elif install_yes == 1:
-                    pass
-                else:
-                    display_line(host_text, '*******************Install expect fail**********************')
-            except pexpect.EOF , e:
-                display_line(host_text, e)
-                display_line(host_text, '*******************Install expect fail**********************')
+            except pexpect.TIMEOUT:
+                display_line(host_text,
+                             'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
 
+
+        script_path = os.path.join(path, 'caliper/utils/automation_scripts/Scripts')
         os.chdir(script_path)
         exec_log(host_text, self.command, host_log_path)
         shutil.copyfile( os.path.join(script_path, 'host_dependency_dir/host_dependency_output_summary.txt'), '%s/caliper_output/host_dependency_output_summary.txt' % (os.environ['HOME']))
@@ -367,8 +385,6 @@ def target_install():
     Thread_test.start()
 
 def host_install():
-    global host_pc_password_value
-    host_pc_password_value = host_pc_password.get()
     Thread_test = install_host_thread('./host_dependency.exp y %s'%(host_pc_password_value))
     Thread_test.start()
 
@@ -462,6 +478,7 @@ if __name__ == "__main__":
     host_install_button = Button(host_ui, text='Install', command=host_install)
     host_install_button.grid(row=6, column=2)
     host_install_button.configure(state=DISABLED)
+
 
     #View result button
     global host_view_button
