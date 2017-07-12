@@ -1,8 +1,7 @@
 #!/usr/bin/expect
 set timeout  1800
 set option [ lindex $argv 0 ]
-set hostuser [ lindex $argv 1 ]
-set passwd [ lindex $argv 2 ]
+set passwd [ lindex $argv 1 ]
 
 set i 0
 spawn sudo ./host_dependency.sh $option
