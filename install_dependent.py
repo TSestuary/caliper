@@ -151,34 +151,33 @@ class download(threading.Thread):
                 try:
                     display_line(host_text, "apt-get update")
                     update_apt = pexpect.spawn('sudo apt-get update', timeout=60)
-                    input_password = update_apt.expect(["[sudo]", pexpect.TIMEOUT])
-                    if input_password == 0:
-                        try:
+                    try:
+                        input_password = update_apt.expect(["[sudo]"])
+                        if input_password == 0:
                             update_apt.sendline(host_pc_password_value)
-                            for line in update_apt.readlines():
-                                print line
-                        except pexpect.EOF, e:
-                            print e
-                    elif input_password == 1:
-                        pass
-                    display_line(host_text, "install %s"%tool)
+                    except pexpect.TIMEOUT:
+                        display_line(host_text,
+                                     'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
+                    display_line(host_text, "install %s" % tool)
                     update_tool = pexpect.spawn('sudo apt-get install %s' % tool, timeout=60)
-                    input_password = update_tool.expect(["[sudo]", pexpect.TIMEOUT])
-                    if input_password == 0:
-                        update_tool.sendline(host_pc_password_value)
-                        for line in update_tool.readlines():
-                            print line
-                            display_line(host_text, line)
-                    elif input_password == 1:
-                        pass
-                    input_c = update_tool.expect(["continue?", pexpect.TIMEOUT], timeout=60)
-                    if input_c == 0:
-                        update_tool.sendline("Y")
-                        for line in update_tool.readlines():
-                            print line
-                            display_line(host_text, line)
-                    elif input_c == 1:
-                        pass
+                    try:
+                        input_password = update_tool.expect(["[sudo]"])
+                        if input_password == 0:
+                            update_tool.sendline(host_pc_password_value)
+                            for line in update_tool.readlines():
+                                print line
+                                display_line(host_text, line)
+                    except pexpect.TIMEOUT:
+                        display_line(host_text, 'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
+                    try:
+                        input_c = update_tool.expect(["continue?"], timeout=60)
+                        if input_c == 0:
+                            update_tool.sendline("Y")
+                            for line in update_tool.readlines():
+                                print line
+                                display_line(host_text, line)
+                    except pexpect.TIMEOUT:
+                        display_line(host_text, 'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
                 except OSError, e:
                     print e
                     pass
@@ -241,7 +240,7 @@ class install_dependency_thread(threading.Thread):
         if '.pub' in ssh_check:
             try:
                 child = pexpect.spawn('ssh-copy-id -i %s/.ssh/id_rsa.pub root@%s'%(os.environ['HOME'], dependency_ip_value), timeout=5)
-                input_password = child.expect(["password", pexpect.TIMEOUT])
+                input_password = child.expect(["sudo", pexpect.TIMEOUT])
                 if input_password == 0:
                     child.sendline(dependency_password_value)
                     # child.sendline(dependency_password_value+'\r')
@@ -276,7 +275,7 @@ class install_host_thread(threading.Thread):
         host_log_button.configure(state=DISABLED)
         #check expect
         output = Popen('which expect', shell=True, stdout=PIPE)
-        if output.stdout.readlines():
+        if not output.stdout.readlines():
             display_line(host_text, 'Install expect......')
             expect_install = pexpect.spawn('sudo apt-get install expect', timeout=60)
             try:
@@ -284,15 +283,18 @@ class install_host_thread(threading.Thread):
                 if install_expect == 0:
                     expect_install.sendline(host_pc_password_value)
                     display_line(host_text, expect_install.before)
+            except pexpect.TIMEOUT:
+                display_line(host_text,
+                            'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
+            try:
                 install_yes = expect_install.expect(["continue?", pexpect.TIMEOUT])
                 if install_yes == 0:
                     expect_install.sendline('y')
                     display_line(host_text, expect_install.before)
-                elif install_yes == 1:
-                    pass
-            except pexpect.EOF , e:
-                display_line(host_text, e)
-                display_line(host_text, '*******************Install expect fail**********************')
+            except pexpect.TIMEOUT:
+                display_line(host_text,
+                             'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
+
 
         script_path = os.path.join(path, 'caliper/utils/automation_scripts/Scripts')
         os.chdir(script_path)
