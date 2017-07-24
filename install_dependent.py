@@ -10,6 +10,8 @@ import threading,thread
 from subprocess import Popen, PIPE
 import pexpect
 import shutil
+from ScrolledText import ScrolledText
+
 
 path =  os.getcwd()
 if os.path.exists(os.path.join(path, 'caliper')):
@@ -100,26 +102,13 @@ class download(threading.Thread):
 
     '''download caliper code'''
     def clone(self):
-        # os.system('git clone https://github.com/TSestuary/caliper.git')
-        display_line(host_text, "Cloning into 'caliper'...")
-        exec_log(host_text, 'git clone https://github.com/Putter/caliper.git', host_log_path)
+        exec_log(host_text, 'git clone https://github.com/Putter/caliper.git 2>&1', host_log_path)
 
     '''install caliper'''
     def install_caliper(self):
         os.chdir('caliper')
-        os.system('git branch -a')
-        os.system('git checkout download_caliper')
-        os.system('git branch -a')
-        # caliper_install = pexpect.spawn('sudo python setup.py install', timeout=5)
-        # install_caliper = caliper_install.expect(["password", pexpect.TIMEOUT])
-        # if install_caliper == 0:
-        #     try:
-        #         caliper_install.sendline(host_pc_password_value)
-        #         print caliper_install.readlines()
-        #     except pexpect.EOF , e:
-        #          print e
-        # elif install_caliper == 1:
-        #     pass
+        exec_log(host_text, 'git branch -a', host_log_path)
+        exec_log(host_text, 'git checkout download_caliper', host_log_path)
 
     def judge_tool_installed(self, tool):
         try:
@@ -128,6 +117,7 @@ class download(threading.Thread):
             return 0
         else:
             if output.stdout.readlines():
+                display_line(host_text, "%s is already installed" % (tool))
                 return 1
             else:
                 return 0
@@ -158,6 +148,7 @@ class download(threading.Thread):
                     except pexpect.TIMEOUT:
                         display_line(host_text,
                                      'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
+                    display_line(host_text, update_apt.readlines(-1))
                     display_line(host_text, "install %s" % tool)
                     update_tool = pexpect.spawn('sudo apt-get install %s' % tool, timeout=60)
                     try:
@@ -179,9 +170,9 @@ class download(threading.Thread):
                     except pexpect.TIMEOUT:
                         display_line(host_text, 'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
                 except OSError, e:
-                    print e
+                    display_line(host_text, e)
                     pass
-        time.sleep(60)
+        display_line(host_text, 'Start download ...')
         self.clone()
         self.install_caliper()
         display_line(host_text, '*******************Download finished**********************')
@@ -211,23 +202,27 @@ class install_dependency_thread(threading.Thread):
 
     def run(self):
         if self.dependency == 'target':
+            target_gpw_pb_ivar.set(0)
             target_log_button.configure(state=DISABLED)
             target_view_button.configure(state=DISABLED)
             target_install_button.configure(state=DISABLED)
             os.chdir(script_path)
             exec_log(self.display, self.command, target_log_path)
             # self.copy_key(target_ip_value, target_password_value)
+            target_gpw_pb_ivar.set(29)
             target_log_button.configure(state=NORMAL)
             target_install_button.configure(state=NORMAL)
             target_view_button.configure(state=NORMAL)
             display_line(target_text, '*******************Install finished**********************')
         elif self.dependency == 'TestNode':
+            node_gpw_pb_ivar.set(0)
             node_log_button.configure(state=DISABLED)
             node_view_button.configure(state=DISABLED)
             node_install_button.configure(state=DISABLED)
             os.chdir(script_path)
             exec_log(self.display, self.command, node_log_path)
             # self.copy_key(node_ip_value, node_password_value)
+            node_gpw_pb_ivar.set(7)
             node_view_button.configure(state=NORMAL)
             node_install_button.configure(state=NORMAL)
             node_log_button.configure(state=NORMAL)
@@ -340,6 +335,7 @@ class install_host_thread(threading.Thread):
                 f.write('ERROR-IN-AUTOMATION:Fail to create ssh key ')
                 f.close()
         os.chdir(path)
+        gpw_pb_ivar.set(33)
         display_line(host_text, '*******************Install finished**********************')
         host_install_button.configure(state=NORMAL)
         host_view_button.configure(state=NORMAL)
@@ -358,19 +354,45 @@ def exec_log(display, command, text):
                 f.write(line)
                 if 'host finished' in line:
                     gpw_pb_ivar.set(gpw_pb_ivar.get() + 1)
+                if 'host finished install' in line:
+                    line = line.split('finished')[1].replace(' ', '', 1).replace('\n', '') + ' finished'
+                    display_status(status_host, line)
+                if 'host ERROR-IN-AUTOMATION' in line:
+                    line = line.split(':')[1]
+                    display_status(status_host, line)
                 if 'target finished' in line:
                     target_gpw_pb_ivar.set(target_gpw_pb_ivar.get() + 1)
+                if 'target finished install' in line:
+                    line = line.split('finished')[1].replace(' ', '', 1).replace('\n', '') + ' finished'
+                    display_status(status_target, line)
+                if 'target ERROR-IN-AUTOMATION' in line:
+                    line = line.split(':')[1]
+                    display_status(status_target, line)
                 if 'TestNode successful' in line:
                     node_gpw_pb_ivar.set(node_gpw_pb_ivar.get() + 1)
+                if 'TestNode successful install' in line:
+                    line = line.split('successful')[1].replace(' ', '', 1).replace('\n', '')+' finished'
+                    display_status(status_node, line)
+                if 'TestNode ERROR-IN-AUTOMATION' in line:
+                    line = line.split(':')[1]
+                    display_status(status_node, line)
     except OSError, e:
         display_line(display, e)
         f.write(e)
 
+# display log
 def display_line(display, line):
-    display.grid(row=9, column=0, columnspan=10, rowspan=10, sticky=W+E+N+S)
+    display.grid(row=20, column=0, columnspan=10, rowspan=10, sticky=W+E+N+S)
     display.insert(INSERT, "%s\n" % line)
     display.see(END)
     display.update()
+
+# display install status
+def display_status(statu, line):
+    statu.insert(INSERT, "%s\n" % line)
+    statu.see(END)
+    statu.update()
+
 
 
 def target_install():
@@ -406,16 +428,16 @@ if __name__ == "__main__":
     var = IntVar()
     master.resizable(0, 0)
     master.geometry('%dx%d'%(640, 600))
-    master.title('Caliper Install GUI')
+    master.title('Caliper Installer')
 
     #create note book
     tabControl = ttk.Notebook(master)
     host_ui = ttk.Frame(tabControl)  # Add a second tab
-    tabControl.add(host_ui, text='Install Host')  # Make second tab visible
+    tabControl.add(host_ui, text='Host')  # Make Host tab visible
     target_ui = ttk.Frame(tabControl)  # Create a tab
-    tabControl.add(target_ui, text='Install target')  # Add the tab
+    tabControl.add(target_ui, text='Target')  # Add Target tab
     node_ui = ttk.Frame(tabControl)  # Add a third tab
-    tabControl.add(node_ui, text='Install Node')  # Make second tab visible
+    tabControl.add(node_ui, text='TestNode')  # Make TestNode tab visible
     tabControl.pack(expand=1, fill="both") # Pack to make visible
 
     #make target ui
@@ -495,15 +517,36 @@ if __name__ == "__main__":
     global gpw_pb_ivar
     gpw_pb_ivar = var
     gpw_pb_ivar.set(0)
-    progressbar = ttk.Progressbar(host_ui, mode='determinate', maximum = 34, variable = gpw_pb_ivar)
+    progressbar = ttk.Progressbar(host_ui, mode='determinate', maximum = 33, variable = gpw_pb_ivar)
     progressbar.grid(row=8, column=0, columnspan=10, rowspan=1, sticky=W+E+N+S)
 
+    stauts_label = ttk.LabelFrame(host_ui, text='status')
+    stauts_label.grid(row=9, column=0, columnspan=10, rowspan=10, padx=8, pady=4, sticky=W+E+N+S)
 
-    #
+    target_stauts_label = ttk.LabelFrame(target_ui, text='status')
+    target_stauts_label.grid(row=9, column=0, columnspan=10, rowspan=10, padx=8, pady=4, sticky=W + E + N + S)
+
+
+
+
+    global status_host, status_target
+    status_host = ScrolledText(stauts_label, bg='white', height = 8, width=85)
+    status_host.grid(row=0, column=0, sticky=E)
+    status_target = ScrolledText(target_stauts_label, bg='white', height=8, width=85)
+    status_target.grid(row=0, column=0, sticky=E)
+
+
+    #export log
+    host_log_label = ttk.LabelFrame(host_ui, text='log')
+    host_log_label.grid(row=20, column=0, columnspan=10, rowspan=10, padx=8, pady=4, sticky=W + E + N + S)
+    target_log_label = ttk.LabelFrame(target_ui, text='log')
+    target_log_label.grid(row=20, column=0, columnspan=10, rowspan=10, padx=8, pady=4, sticky=W + E + N + S)
+
+
     global host_text, target_text, node_text
-    host_text = Text(host_ui, height=32, wrap=WORD)
-    target_text = Text(target_ui, height=32, wrap=WORD)
-    node_text = Text(node_ui, height=32, wrap=WORD)
+    host_text = ScrolledText(host_log_label, height = 20, bg='white', width=85)
+    target_text = ScrolledText(target_log_label, height=20, bg='white', width=85)
+
 
     #make node ui
     #weight layout
@@ -544,8 +587,18 @@ if __name__ == "__main__":
     node_var = IntVar()
     node_gpw_pb_ivar = node_var
     node_gpw_pb_ivar.set(0)
-    target_progressbar = ttk.Progressbar(node_ui, mode='determinate', maximum=9, variable=node_gpw_pb_ivar)
+    target_progressbar = ttk.Progressbar(node_ui, mode='determinate', maximum=7, variable=node_gpw_pb_ivar)
     target_progressbar.grid(row=8, column=0, columnspan=10, rowspan=1, sticky=W + E + N + S)
+
+
+    global status_node
+    node_stauts_label = ttk.LabelFrame(node_ui, text='status')
+    node_stauts_label.grid(row=9, column=0, columnspan=10, rowspan=10, padx=8, pady=4, sticky=W + E + N + S)
+    status_node = ScrolledText(node_stauts_label, bg='white', height=8, width=85)
+    status_node.grid(row=0, column=0, sticky=E)
+    node_log_label = ttk.LabelFrame(node_ui, text='log')
+    node_log_label.grid(row=20, column=0, columnspan=10, rowspan=10, padx=8, pady=4, sticky=W + E + N + S)
+    node_text = ScrolledText(node_log_label, height=20, bg='white', width=85)
 
     #loop tk
     mainloop()

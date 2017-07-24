@@ -39,7 +39,7 @@ while true {
 		}
 		"ERROR-IN-AUTOMATION" {
 			send_user "FAILED IN TestNode DEPENDENCY\n"
-			exit 1
+			#exit 1
 		}
 		eof {
 			send_user "TestNode dependency satisfied.\n"
