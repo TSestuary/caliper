@@ -52,6 +52,7 @@ then
             then
                 if [ ${target_packages[$i]} == 'mysql-server*' -o ${target_packages[$i]} == 'libmysqlclient-dev' ]
                 then
+                    echo -e "target $ERROR:The ${target_packages[$i]} package is not present. Please install it manually"
                     echo -e "$ERROR:The ${target_packages[$i]} package is not present. Please install it manually" >> target_dependency_output_summary.txt
                     continue
                 else
@@ -65,10 +66,12 @@ then
                     sudo apt-get install ${target_packages[$i]} -y
                     if [ $? -ne 0 ]
                     then
+                        echo -e "target $ERROR:${target_packages[$i]} is not installed properly"
                         echo -e "\n\t\t$ERROR:${target_packages[$i]} is not installed properly" >> target_dependency_output_summary.txt
                         continue
 		    else
 			echo "${target_packages[$i]} is installed" >>  target_dependency_output_summary.txt
+			echo "target finished install ${target_packages[$i]}"
                     fi
                 fi
             else
@@ -76,8 +79,9 @@ then
             fi
         else
            echo "${target_packages[$i]} is installed" >>  target_dependency_output_summary.txt
+           echo "target finished install ${target_packages[$i]}"
         fi
-        echo "target finished install ${target_packages[$i]}"
+
     done
 else
     if [ ! $architecture_x86_64 -eq 0 ]
@@ -115,23 +119,26 @@ else
                 wait
                 if [ $? -ne 0 ]
                 then
-                        echo -e "\n\t\t$ERROR:${target_packages[$i]} is not installed properly" >>  target_dependency_output_summary.txt
-                        continue
+                    echo -e "target $ERROR:${target_packages[$i]} is not installed properly"
+                    echo -e "\n\t\t$ERROR:${target_packages[$i]} is not installed properly" >>  target_dependency_output_summary.txt
+                    continue
                 fi
            else
                echo "Please install ${target_packages[$i]} and try again" >> target_dependency_output_summary.txt
            fi
         else
            echo "${target_packages[$i]} is installed" >> target_dependency_output_summary.txt
+           echo "target finished install ${target_packages[$i]}"
         fi
-        echo "target finished install ${target_packages[$i]}"
+
     done
 
 	if [ $choice == 'y' ]
 	then
         if [ ! `sudo find /usr/local/mysql/bin -name mysql` ];
 		then
-                        echo "install mysql-server manually..." >> target_dependency_output_summary.txt
+		    echo "target $ERROR:install mysql-server manually..."
+            echo "\n\t\t$ERROR:install mysql-server manually..." >> target_dependency_output_summary.txt
 		else
 		        echo "mysql is installed" >> target_dependency_output_summary.txt
 		fi
@@ -180,7 +187,7 @@ fi
 #            sudo mount $2 /mnt/sdb
 #                if [ $? -ne 0 ]
 #                then
-#                echo -e "\n$ERROR:Creating a Mount Path for Fio testing Failed\n" >> target_dependency_output_summary.txt
+#                   echo -e "\n$ERROR:Creating a Mount Path for Fio testing Failed\n" >> target_dependency_output_summary.txt
 #            fi
 #        fi
 #        echo -e "\nMount Partition for storage testing Already exits\n" >> target_dependency_output_summary.txt
@@ -194,6 +201,7 @@ then
     cp /usr/lib/linux-tools/$temp/perf /usr/bin/
     if [ $? -ne 0 ]
     then
+        echo -e "target $ERROR:Failed to cp the perf path"
         echo -e "\n\t\t$ERROR:Failed to cp the perf path" >> target_dependency_output_summary.txt
     fi
 fi

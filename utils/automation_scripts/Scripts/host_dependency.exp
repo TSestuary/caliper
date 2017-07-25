@@ -23,7 +23,7 @@ while true {
 		"*\# " { send_user "HOST dependency exiting \n" }
 		"ERROR-IN-AUTOMATION" {
 			send_user "HOST FAILED"
-			exit 1
+			#exit 1
 		}
 		timeout {puts "timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C";exit 1}
 		eof { 

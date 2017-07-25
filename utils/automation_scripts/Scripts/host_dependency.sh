@@ -21,13 +21,6 @@ ERROR="ERROR-IN-AUTOMATION"
 UPDATE=0
 clear 
 echo "HOST"
-
-echo "HOST DEPENDENCY"
-echo "INSTALL CALIPER ......"
-cd ../../../../
-sudo python setup.py install
-cd utils/automation_scripts/Scripts/host_dependency_dir
-echo "host finished install caliper"
 for i in `seq 0 $((${#host_packages[@]}-1)) `
 do
 	#chcking to see if all the host dependent packages are installed
@@ -55,18 +48,21 @@ do
             sudo apt-get -f install ${host_packages[$i]} -y
             if [ $? -ne 0 ]
             then
+                echo -e "host $ERROR:${host_packages[$i]} is not installed properly\n"
                 echo -e "\n\t\t$ERROR:${host_packages[$i]} is not installed properly" >> host_dependency_output_summary.txt
                 continue
 	    else
        		echo "${host_packages[$i]} is installed" >> host_dependency_output_summary.txt
+       		echo "host finished install ${host_packages[$i]}"
             fi
        else
+           echo -e "host $ERROR:Please install ${host_packages[$i]} and try again\n"
            echo -e "\n\t\t$ERROR:Please install ${host_packages[$i]} and try again" >> host_dependency_output_summary.txt
        fi
     else
        echo "${host_packages[$i]} is installed" >> host_dependency_output_summary.txt
+       echo "host finished install ${host_packages[$i]}"
     fi
-    echo "host finished install ${host_packages[$i]}"
 done
 
 host_pip_packages=('Django' 'numpy' 'matplotlib' 'openpyxl')
@@ -102,18 +98,22 @@ do
             fi 
             if [ $? -ne 0 ]
             then
+                echo -e "host $ERROR:${host_pip_packages[$i]} is not installed properly\n"
                 echo -e "\n\t\t$ERROR:${host_pip_packages[$i]} is not installed properly" >> host_dependency_output_summary.txt
                 continue
      	    else
        		echo "${host_pip_packages[$i]} is installed" >> host_dependency_output_summary.txt
+       		echo "host finished install ${host_pip_packages[$i]}"
             fi
         else
+            echo -e "host $ERROR:Please install ${host_pip_packages[$i]} and try again\n"
            echo -e "\n\t\t$ERROR:Please install ${host_pip_packages[$i]} and try again" >> host_dependency_output_summary.txt
         fi
      else
        echo "${host_pip_packages[$i]} is installed" >> host_dependency_output_summary.txt
+       echo "host finished install ${host_pip_packages[$i]}"
      fi
-     echo "host finished install ${host_pip_packages[$i]}"
+
 done
 
 check=`sudo find /usr/local/lib -name libpcre.so | grep -c libpcre.so`
@@ -133,6 +133,7 @@ then
 	sudo mkdir -p $NFS_mount 
 	if [ $? -ne 0 ]
 	then
+		echo "host $ERROR:NFS MOUNTING FAILED\n"
 		echo "$ERROR:NFS MOUNTING FAILED" >> host_dependency_output_summary.txt
 	fi
 fi
@@ -140,11 +141,13 @@ echo "host finished mount requirements"
 sudo chmod -R 775 /mnt/caliper_nfs/ltp_log
 if [ $? -ne 0 ]
 then
+	echo "host $ERROR:NFS PERMISSION SETTING FAILED\n"
 	echo "$ERROR:NFS PERMISSION SETTING FAILED" >> host_dependency_output_summary.txt
 fi
 sudo chown -R $USER:$USER /mnt/caliper_nfs/ltp_log
 if [ $? -ne 0 ]
 then
+	echo "host $ERROR:NFS OWNER SETTING FAILED\n"
 	echo "$ERROR:NFS OWNER SETTING FAILED" >> host_dependency_output_summary.txt
 fi
 echo "host finished NFS OWNER SETTING"
@@ -180,6 +183,7 @@ else
         `sudo echo "$command" >> /etc/exports`
         if [ $? -ne 0 ]
         then
+            echo "host $ERROR:EXPORTING THE PATH FAILED\n"
             echo -e "\n\t\t$ERROR:EXPORTING THE PATH FAILED" >> host_dependency_output_summary.txt
         fi
     else
@@ -192,6 +196,7 @@ echo "Restarting nfs-kernel-server"
 sudo service nfs-kernel-server restart
 if [ $? -ne 0 ]
 then
+    echo "host $ERROR:RESTARTING THE NFS_KERNEL Failed\n"
 	echo -e "\n\t\t$ERROR:RESTARTING THE NFS_KERNEL Failed" >> host_dependency_output_summary.txt
 fi
 echo "host finished restaring the nfs-kernal-service"

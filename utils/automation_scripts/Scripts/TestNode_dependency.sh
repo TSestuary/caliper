@@ -39,6 +39,7 @@ do
                     echo "please install netperf 2.7.0 version" >> $logpath
                 else
                     echo -e "\n${dependency[$i]} is already installed" >> $logpath
+                    echo "TestNode successful install netperf"
                 fi
             elif [ ${dependency[$i]} == 'iperf3' ];then
                 check_version=`iperf3 --version | grep -c "3.1.4"`
@@ -46,6 +47,7 @@ do
                     echo -e "please install iperf3 3.1.4 version" >> $logpath
                 else
                     echo -e "\n${dependency[$i]} is already installed" >> $logpath
+                    echo "TestNode successful install iperf3"
                 fi
             elif [ ${dependency[$i]} == 'qperf' ];then
                 check_version=`qperf -V | grep -c "0.4.9"`
@@ -53,6 +55,7 @@ do
                     echo "please install qperf 0.4.9 version" >> $logpath
                 else
                     echo -e "\n${dependency[$i]} is already installed" >> $logpath
+                    echo "TestNode successful install qperf"
                 fi
             fi
         else
@@ -78,10 +81,13 @@ do
                         qperfcheck=`sudo find /usr -name qperf | grep -c qperf`
                         if [ $qperfcheck -ne 0 ];then
                             echo "qperf is installed" >> $logpath
+                            echo "TestNode successful install qperf"
                         else
+                            echo "TestNode $ERROR :qperf is not installed"
                             echo -e "\n$ERROR :qperf is not installed" >> $logpath
                         fi
                     else
+                        echo  "TestNode $ERROR :download qperf fail"
                         echo -e "\n$ERROR :download qperf fail" >> $logpath
                     fi
                 elif [ ${dependency[$i]} == 'netperf' ];then
@@ -100,10 +106,13 @@ do
                         netperfcheck=`sudo find /usr -name netperf | grep -c netperf`
                         if [ $netperfcheck -ne 0 ];then
                             echo "netperf is installed" >> $logpath
+                            echo "TestNode successful install netperf"
                         else
+                            echo "TestNode $ERROR :netperf install"
                             echo -e "\n$ERROR :netperf install " >> $logpath
                         fi
                     else
+                        echo -e "TestNode $ERROR :download netperf fail"
                         echo -e "\n$ERROR :download netperf fail" >> $logpath
                     fi
 
@@ -119,17 +128,19 @@ do
                         iperf3check=`sudo find /usr -name iperf3 | grep -c iperf3`
                         if [ $iperf3check -ne 0 ];then
                             echo "iperf3 is installed" >> $logpath
+                            echo "TestNode successful install iperf3"
                         else
+                            echo "TestNode $ERROR:iperf3 is not installed"
                             echo "$ERROR:iperf3 is not installed" >> $logpath
                         fi
                     else
+                        echo "TestNode $ERROR :download iperf 3.1.4.zip fail"
                         echo -e "\n$ERROR :download iperf 3.1.4.zip fail" >> $logpath
                     fi
 
                 fi
             fi
         fi
-    echo "TestNode successful install ${dependency[$i]}"
 done
 
 if [ ! -f ~/caliper_redis/redis_benchmark ];then
@@ -151,6 +162,7 @@ do
             wait
             echo "\n\t\tdone restarting netperf"
             if [ $? -ne 0 ];then
+                echo "TestNode $ERROR:Could Not restart Netperf please try again"
                 echo -e "\n\t\t$ERROR:Could Not restart Netperf please try again" >> $logpath
                 exit 1
             fi
@@ -159,6 +171,7 @@ do
         if  ! ps -ef | grep "iperf3" | grep -v grep  ;then 
             iperf3 -s &
             if [ $? -ne 0 ];then
+                echo "TestNode $ERROR:Could Not restart Iperf please try again"
                 echo -e "\n\t\t$ERROR:Could Not restart Iperf please try again" >> $logpath
                 exit 1
             fi
@@ -167,6 +180,7 @@ do
         if  ! ps -ef | grep "qperf" | grep -v grep  ;then 
             qperf &
             if [ $? -ne 0 ];then
+                echo "TestNode $ERROR:Could Not restart Qperf please try again"
                 echo -e "\n\t\t$ERROR:Could Not restart Qperf please try again" >> $logpath
                 exit 1
             fi

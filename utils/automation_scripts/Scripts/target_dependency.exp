@@ -36,7 +36,7 @@ while true {
 		 }
         	"ERROR-IN-AUTOMATION" {
 			send_user "FAILED IN TARGET DEPENDENY\n"
-           		exit 1
+           		#exit 1
         	}
 		timeout {
 			send_user "U have not selected any choice:"
