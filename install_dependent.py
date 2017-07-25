@@ -98,10 +98,9 @@ class install_caliper(threading.Thread):
     def run(self):
         os.chdir('caliper')
         exec_log(host_text, 'git branch -a', host_log_path)
-        try:
-            if sys.argv[1]:
-                exec_log(host_text, 'git checkout download_caliper', host_log_path)
-        except:
+        if len(sys.argv)>1:
+            exec_log(host_text, 'git checkout download_caliper', host_log_path)
+        else:
             exec_log(host_text, 'git checkout caliper_deploy_gui', host_log_path)
         display_line(host_text,'Start install caliper ...')
         install_caliper = pexpect.spawn('sudo python setup.py install', timeout=180)
@@ -126,10 +125,9 @@ class download(threading.Thread):
 
     '''download caliper code'''
     def clone(self):
-        try:
-            if sys.argv[1]:
-                exec_log(host_text, 'git clone https://github.com/Putter/caliper.git 2>&1', host_log_path)
-        except:
+        if len(sys.argv)>1:
+            exec_log(host_text, 'git clone https://github.com/Putter/caliper.git 2>&1', host_log_path)
+        else:
             exec_log(host_text, 'git clone https://github.com/TSestuary/caliper.git 2>&1', host_log_path)
 
     def judge_tool_installed(self, tool):
