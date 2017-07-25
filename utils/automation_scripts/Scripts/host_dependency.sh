@@ -21,13 +21,6 @@ ERROR="ERROR-IN-AUTOMATION"
 UPDATE=0
 clear 
 echo "HOST"
-
-echo "HOST DEPENDENCY"
-echo "INSTALL CALIPER ......"
-cd ../../../../
-sudo python setup.py install
-cd utils/automation_scripts/Scripts/host_dependency_dir
-echo "host finished install caliper"
 for i in `seq 0 $((${#host_packages[@]}-1)) `
 do
 	#chcking to see if all the host dependent packages are installed

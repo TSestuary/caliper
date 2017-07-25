@@ -90,6 +90,30 @@ class Result():
         tkMessageBox.showinfo("host log", "host log path : %s" % host_log_path)
         # os.system("gedit '%s'"%host_log_path)
 
+class install_caliper(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+
+    '''install caliper'''
+    def run(self):
+        os.chdir('caliper')
+        exec_log(host_text, 'git branch -a', host_log_path)
+        try:
+            if sys.argv[1]:
+                exec_log(host_text, 'git checkout download_caliper', host_log_path)
+        except:
+            exec_log(host_text, 'git checkout caliper_deploy_gui', host_log_path)
+        display_line(host_text,'Start install caliper ...')
+        install_caliper = pexpect.spawn('sudo python setup.py install', timeout=180)
+        try:
+            input_password = install_caliper.expect(["[sudo]"])
+            if input_password == 0:
+                install_caliper.sendline(host_pc_password_value)
+            for line in install_caliper.readlines():
+                display_line(host_text, line)
+        except pexpect.TIMEOUT:
+            display_line(host_text, 'timeout!')
+
 class download(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -102,13 +126,11 @@ class download(threading.Thread):
 
     '''download caliper code'''
     def clone(self):
-        exec_log(host_text, 'git clone https://github.com/Putter/caliper.git 2>&1', host_log_path)
-
-    '''install caliper'''
-    def install_caliper(self):
-        os.chdir('caliper')
-        exec_log(host_text, 'git branch -a', host_log_path)
-        exec_log(host_text, 'git checkout download_caliper', host_log_path)
+        try:
+            if sys.argv[1]:
+                exec_log(host_text, 'git clone https://github.com/Putter/caliper.git 2>&1', host_log_path)
+        except:
+            exec_log(host_text, 'git clone https://github.com/TSestuary/caliper.git 2>&1', host_log_path)
 
     def judge_tool_installed(self, tool):
         try:
@@ -174,7 +196,6 @@ class download(threading.Thread):
                     pass
         display_line(host_text, 'Start download ...')
         self.clone()
-        self.install_caliper()
         display_line(host_text, '*******************Download finished**********************')
 
     def run(self):
@@ -186,9 +207,11 @@ class download(threading.Thread):
         # check os version, caliper only support ubuntu 16.04 and ubuntu 14.04
         if '16.04' in version:
             self.run_install()
+            install_caliper_button.configure(state=NORMAL)
             host_install_button.configure(state=NORMAL)
         elif '14.04' in version:
             self.run_install()
+            install_caliper_button.configure(state=NORMAL)
             host_install_button.configure(state=NORMAL)
         else:
             display_line(host_text, 'OS error : caliper only support ubuntu 16.04 and ubuntu 14.04')
@@ -289,8 +312,6 @@ class install_host_thread(threading.Thread):
             except pexpect.TIMEOUT:
                 display_line(host_text,
                              'timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C')
-
-
         script_path = os.path.join(path, 'caliper/utils/automation_scripts/Scripts')
         os.chdir(script_path)
         exec_log(host_text, self.command, host_log_path)
@@ -340,8 +361,6 @@ class install_host_thread(threading.Thread):
         host_install_button.configure(state=NORMAL)
         host_view_button.configure(state=NORMAL)
         host_log_button.configure(state=NORMAL)
-
-
 
 def exec_log(display, command, text):
     f = open(text, 'a+')
@@ -393,8 +412,6 @@ def display_status(statu, line):
     statu.see(END)
     statu.update()
 
-
-
 def target_install():
     # global define target_user and target_ip value
     global target_user_value, target_ip_value, target_password_value
@@ -409,7 +426,6 @@ def target_install():
 def host_install():
     Thread_test = install_host_thread('./host_dependency.exp y %s'%(host_pc_password_value))
     Thread_test.start()
-
 
 def node_install():
     global node_ip_value, node_password_value
@@ -451,11 +467,11 @@ if __name__ == "__main__":
     # i value is:target_user, target_ip, target_password, disk_name
     for i in range(0,2):
         akt_bb = StringVar()
-        entry = Entry(target_ui, width=38)
+        entry = Entry(target_ui, width=40)
         entry.grid(row=i, column=1, sticky=W)
         entries.append(entry)
 
-    password_entry = Entry(target_ui, width=38, show = '*')
+    password_entry = Entry(target_ui, width=40, show = '*')
     password_entry.grid(row=2, column=1, sticky=W)
 
     #Install button
@@ -488,30 +504,35 @@ if __name__ == "__main__":
 
     #weight layout
     # package_installation_choice.grid(row=0, column=1, sticky=W)
-    host_pc_password = Entry(host_ui, width=38, show = '*')
+    host_pc_password = Entry(host_ui, width=25, show = '*')
     host_pc_password.grid(row=0, column=1, sticky=W)
 
     # Download button
     download_button = Button(host_ui, text='download caliper', command=download_code)
     download_button.grid(row=6, column=1, sticky=E)
 
+    global install_caliper_button
+    install = install_caliper()
+    install_caliper_button = Button(host_ui, text='Install Caliper', command=install.start)
+    install_caliper_button.grid(row=6, column=2)
+    install_caliper_button.configure(state=DISABLED)
+
     #Install button
     global host_install_button
     host_install_button = Button(host_ui, text='Install', command=host_install)
-    host_install_button.grid(row=6, column=2)
+    host_install_button.grid(row=6, column=3)
     host_install_button.configure(state=DISABLED)
-
 
     #View result button
     global host_view_button
     host_view_button = Button(host_ui, text='View result', command=result.host_result)
-    host_view_button.grid(row=6, column=3)
+    host_view_button.grid(row=6, column=4)
     host_view_button.configure(state = DISABLED)
 
     # log button
     global host_log_button
     host_log_button = Button(host_ui, text='Log', command=result.open_host_log)
-    host_log_button.grid(row=6, column=4)
+    host_log_button.grid(row=6, column=5)
     host_log_button.configure(state=DISABLED)
 
     global gpw_pb_ivar
@@ -525,9 +546,6 @@ if __name__ == "__main__":
 
     target_stauts_label = ttk.LabelFrame(target_ui, text='status')
     target_stauts_label.grid(row=9, column=0, columnspan=10, rowspan=10, padx=8, pady=4, sticky=W + E + N + S)
-
-
-
 
     global status_host, status_target
     status_host = ScrolledText(stauts_label, bg='white', height = 8, width=85)
@@ -558,11 +576,11 @@ if __name__ == "__main__":
     node_entries = []
     # i value is:target_user, target_ip, target_password, disk_name
     for i in range(0,2):
-        node_entry = Entry(node_ui, width=38)
+        node_entry = Entry(node_ui, width=37)
         node_entry.grid(row=i, column=1, sticky=W)
         node_entries.append(node_entry)
 
-    node_password_entry = Entry(node_ui, width=38, show = '*')
+    node_password_entry = Entry(node_ui, width=37, show = '*')
     node_password_entry.grid(row=2, column=1, sticky=W)
 
     #Install button
