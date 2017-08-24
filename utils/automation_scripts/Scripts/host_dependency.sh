@@ -14,7 +14,14 @@ then
     sudo rm host_dependency_output_summary.txt
 fi
 echo "host finished rm host_dependency_output_summary.txt"
-host_packages=('libc6' 'libncurses5' 'libstdc++6' 'lib32z1' 'python-dev' 'nfs-common' 'build-essential' 'python-pip' 'automake' 'autoconf' 'make' 'openssh-server' 'libnuma-dev' 'texinfo' 'python-matplotlib' 'python-numpy' 'nfs-kernel-server' 'openjdk-7-jre' 'openjdk-7-jdk' 'lib32stdc++6' 'bzr' 'gfortran')
+architecture=`uname -i`
+echo $architecture
+if [ $architecture == "x86_64" ]
+then
+    host_packages=('libc6' 'libncurses5' 'libstdc++6' 'lib32z1' 'python-dev' 'nfs-common' 'build-essential' 'python-pip' 'automake' 'autoconf' 'make' 'openssh-server' 'libnuma-dev' 'texinfo' 'python-matplotlib' 'python-numpy' 'nfs-kernel-server' 'openjdk-7-jre' 'openjdk-7-jdk' 'lib32stdc++6' 'bzr' 'gfortran')
+else
+    host_packages=('libc6' 'libncurses5' 'libstdc++6' 'lib32z1' 'python-dev' 'nfs-common' 'build-essential' 'python-pip' 'automake' 'autoconf' 'make' 'openssh-server' 'libnuma-dev' 'texinfo' 'python-matplotlib' 'python-numpy' 'nfs-kernel-server' 'openjdk-8-jre' 'openjdk-8-jdk' 'lib32stdc++6' 'bzr' 'gfortran')
+fi
 
 NFS_mount="/mnt/caliper_nfs/ltp_log"
 ERROR="ERROR-IN-AUTOMATION"
@@ -23,21 +30,21 @@ clear
 echo "HOST"
 for i in `seq 0 $((${#host_packages[@]}-1)) `
 do
-	#chcking to see if all the host dependent packages are installed
+    #chcking to see if all the host dependent packages are installed
     check=`dpkg-query -W -f='${Status}' ${host_packages[$i]} | grep -c "ok installed"`
     if [ $check -eq 0 ] 
     then
-	# if force option is passed thn forcefully run the scripts
-       if [ $1 = "y" ]
-       then
+    # if force option is passed thn forcefully run the scripts
+        if [ $1 = "y" ]
+        then
             choice="y"
-       else
-           echo "${host_packages[$i]} is not installed, would you like to install(y/n)"
-           read choice
-       fi
+        else
+            echo "${host_packages[$i]} is not installed, would you like to install(y/n)"
+            read choice
+        fi
 
-       if [ $choice = 'y'  ]
-       then
+        if [ $choice = 'y'  ]
+        then
             sudo dpkg --configure -a
             if [ $UPDATE = 0 ]
             then
@@ -51,17 +58,17 @@ do
                 echo -e "host $ERROR:${host_packages[$i]} is not installed properly\n"
                 echo -e "\n\t\t$ERROR:${host_packages[$i]} is not installed properly" >> host_dependency_output_summary.txt
                 continue
-	    else
-       		echo "${host_packages[$i]} is installed" >> host_dependency_output_summary.txt
-       		echo "host finished install ${host_packages[$i]}"
+        else
+            echo "${host_packages[$i]} is installed" >> host_dependency_output_summary.txt
+            echo "host finished install ${host_packages[$i]}"
             fi
-       else
-           echo -e "host $ERROR:Please install ${host_packages[$i]} and try again\n"
-           echo -e "\n\t\t$ERROR:Please install ${host_packages[$i]} and try again" >> host_dependency_output_summary.txt
-       fi
+        else
+            echo -e "host $ERROR:Please install ${host_packages[$i]} and try again\n"
+            echo -e "\n\t\t$ERROR:Please install ${host_packages[$i]} and try again" >> host_dependency_output_summary.txt
+        fi
     else
-       echo "${host_packages[$i]} is installed" >> host_dependency_output_summary.txt
-       echo "host finished install ${host_packages[$i]}"
+        echo "${host_packages[$i]} is installed" >> host_dependency_output_summary.txt
+        echo "host finished install ${host_packages[$i]}"
     fi
 done
 
@@ -73,7 +80,7 @@ do
     check=`pip show ${host_pip_packages[$i]} | grep -c "${host_pip_packages[$i]}"`
     if [ $check -eq 0 ] 
     then
-       # if force option is passed thn forcefully run the scripts
+        # if force option is passed thn forcefully run the scripts
        if [ $1 = "y" ]
        then
             choice="y"
@@ -101,9 +108,9 @@ do
                 echo -e "host $ERROR:${host_pip_packages[$i]} is not installed properly\n"
                 echo -e "\n\t\t$ERROR:${host_pip_packages[$i]} is not installed properly" >> host_dependency_output_summary.txt
                 continue
-     	    else
-       		echo "${host_pip_packages[$i]} is installed" >> host_dependency_output_summary.txt
-       		echo "host finished install ${host_pip_packages[$i]}"
+            else
+                echo "${host_pip_packages[$i]} is installed" >> host_dependency_output_summary.txt
+                echo "host finished install ${host_pip_packages[$i]}"
             fi
         else
             echo -e "host $ERROR:Please install ${host_pip_packages[$i]} and try again\n"
@@ -130,25 +137,25 @@ echo "host finished install pcre"
 #NFS mount requirements
 if [ ! -d $NFS_mount ]
 then
-	sudo mkdir -p $NFS_mount 
-	if [ $? -ne 0 ]
-	then
-		echo "host $ERROR:NFS MOUNTING FAILED\n"
-		echo "$ERROR:NFS MOUNTING FAILED" >> host_dependency_output_summary.txt
-	fi
+    sudo mkdir -p $NFS_mount
+    if [ $? -ne 0 ]
+    then
+        echo "host $ERROR:NFS MOUNTING FAILED\n"
+        echo "$ERROR:NFS MOUNTING FAILED" >> host_dependency_output_summary.txt
+    fi
 fi
 echo "host finished mount requirements"
 sudo chmod -R 775 /mnt/caliper_nfs/ltp_log
 if [ $? -ne 0 ]
 then
-	echo "host $ERROR:NFS PERMISSION SETTING FAILED\n"
-	echo "$ERROR:NFS PERMISSION SETTING FAILED" >> host_dependency_output_summary.txt
+    echo "host $ERROR:NFS PERMISSION SETTING FAILED\n"
+    echo "$ERROR:NFS PERMISSION SETTING FAILED" >> host_dependency_output_summary.txt
 fi
 sudo chown -R $USER:$USER /mnt/caliper_nfs/ltp_log
 if [ $? -ne 0 ]
 then
-	echo "host $ERROR:NFS OWNER SETTING FAILED\n"
-	echo "$ERROR:NFS OWNER SETTING FAILED" >> host_dependency_output_summary.txt
+    echo "host $ERROR:NFS OWNER SETTING FAILED\n"
+    echo "$ERROR:NFS OWNER SETTING FAILED" >> host_dependency_output_summary.txt
 fi
 echo "host finished NFS OWNER SETTING"
 #exporting the path for NFS mounting
@@ -197,6 +204,6 @@ sudo service nfs-kernel-server restart
 if [ $? -ne 0 ]
 then
     echo "host $ERROR:RESTARTING THE NFS_KERNEL Failed\n"
-	echo -e "\n\t\t$ERROR:RESTARTING THE NFS_KERNEL Failed" >> host_dependency_output_summary.txt
+    echo -e "\n\t\t$ERROR:RESTARTING THE NFS_KERNEL Failed" >> host_dependency_output_summary.txt
 fi
 echo "host finished restaring the nfs-kernal-service"
