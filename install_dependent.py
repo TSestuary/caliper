@@ -12,7 +12,6 @@ import pexpect
 import shutil
 from ScrolledText import ScrolledText
 
-
 path =  os.getcwd()
 if os.path.exists(os.path.join(path, 'caliper')):
     if os.path.isfile(os.path.join(path, 'caliper')):
@@ -259,16 +258,14 @@ class install_dependency_thread(threading.Thread):
                 input_password = child.expect(["sudo", pexpect.TIMEOUT])
                 if input_password == 0:
                     child.sendline(dependency_password_value)
-                    # child.sendline(dependency_password_value+'\r')
                 elif input_password == 1:
                     display_line(self.display, '********************ssh copy time out***********************')
                     f = open('%s/caliper_output/%s_dependency_output_summary.txt' % (os.environ['HOME'], self.dependency),'a')
                     f.write('ERROR-IN-AUTOMATION:Fail to cp ssh key \n')
                     f.close()
-                print child.after
-                print child.before
-                display_line(self.display, child.before)  # Print the result of the ls command.
-            except pexpect.EOF , e:
+                for line in child.readlines():
+                    display_line(self.display, line)  # Print the result of the command.
+            except pexpect.TIMEOUT , e:
                 display_line(self.display, e)
                 f = open('%s/caliper_output/%s_dependency_output_summary.txt' % (os.environ['HOME'], self.dependency), 'a')
                 f.write('ERROR-IN-AUTOMATION:Fail to cp ssh key \n')
@@ -323,7 +320,6 @@ class install_host_thread(threading.Thread):
                 child = pexpect.spawn('ssh-keygen -t rsa', timeout=5)
                 except_co = child.expect(["Enter file in which to save the key", pexpect.TIMEOUT])
                 if except_co == 0:
-                    print 'enter'
                     child.send('\r')
                 if except_co == 1:
                    pass
@@ -551,18 +547,15 @@ if __name__ == "__main__":
     status_target = ScrolledText(target_stauts_label, bg='white', height=8, width=85)
     status_target.grid(row=0, column=0, sticky=E)
 
-
     #export log
     host_log_label = ttk.LabelFrame(host_ui, text='log')
     host_log_label.grid(row=20, column=0, columnspan=10, rowspan=10, padx=8, pady=4, sticky=W + E + N + S)
     target_log_label = ttk.LabelFrame(target_ui, text='log')
     target_log_label.grid(row=20, column=0, columnspan=10, rowspan=10, padx=8, pady=4, sticky=W + E + N + S)
 
-
     global host_text, target_text, node_text
     host_text = ScrolledText(host_log_label, height = 20, bg='white', width=85)
     target_text = ScrolledText(target_log_label, height=20, bg='white', width=85)
-
 
     #make node ui
     #weight layout
@@ -606,7 +599,6 @@ if __name__ == "__main__":
     target_progressbar = ttk.Progressbar(node_ui, mode='determinate', maximum=7, variable=node_gpw_pb_ivar)
     target_progressbar.grid(row=8, column=0, columnspan=10, rowspan=1, sticky=W + E + N + S)
 
-
     global status_node
     node_stauts_label = ttk.LabelFrame(node_ui, text='status')
     node_stauts_label.grid(row=9, column=0, columnspan=10, rowspan=10, padx=8, pady=4, sticky=W + E + N + S)
@@ -618,5 +610,3 @@ if __name__ == "__main__":
 
     #loop tk
     mainloop()
-
-
