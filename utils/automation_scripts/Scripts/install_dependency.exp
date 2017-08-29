@@ -1,0 +1,34 @@
+#!/usr/bin/expect
+set timeout  1800
+set option [ lindex $argv 0 ]
+set passwd [ lindex $argv 1 ]
+
+set i 0
+spawn ./install_dependency.sh $option
+while true {
+	expect {
+		"assword" { send "[lindex $passwd]\r"; exp_continue }
+		"Are you sure you want to continue connecting" { send "yes\r"; exp_continue }
+		"would you like to install" {
+			 send_user "INSIDE\t"
+			 interact "\r" return
+			 send "\r"
+		}
+		"Would u like me to do it" {
+			 send_user "INSIDE\t"
+			 interact "\r" return
+			 send "\r"
+		}
+		"*\$ " { send_user "HOST dependency exiting \n" }
+		"*\# " { send_user "HOST dependency exiting \n" }
+		"ERROR-IN-AUTOMATION" {
+			send_user "HOST FAILED"
+			#exit 1
+		}
+		timeout {puts "timeout!Maybe you are uisng non-English OS. Please change to  English OS or set env LANG=C";exit 1}
+		eof {
+			send_user "host dependency satisfied.\n"
+			break
+		}
+	}
+}
