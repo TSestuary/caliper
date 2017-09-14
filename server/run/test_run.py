@@ -337,35 +337,7 @@ def run_all_cases(target_exec_dir, target, kind_bench, bench_name,
                                 str(starttime)[:19],
                                 Folder.caliper_log_file),
                             shell=True)
-    bench_test = "ltp"
-    if  bench_name == bench_test:
-        tar_ip = settings.get_value('TARGET', 'ip', type=str)
-        target.run("if [[ ! -e /mnt/caliper_nfs ]]; then mkdir -p /mnt/caliper_nfs; fi")
-# fix me , now that we create the folder, why not we mount it directly here
-        try:
-             tar_mask = ".".join(tar_ip.split(".")[0:3])
-             p1 = subprocess.Popen(["ifconfig"], stdout=subprocess.PIPE)
-             p2 = subprocess.Popen(["grep", tar_mask], stdin=p1.stdout, stdout=subprocess.PIPE)
-             p1.stdout.close()
-             output,err = p2.communicate()
-             output = output.strip()
-             host_ip = output.split("inet addr:")[1].split(" ")[0]
-        except Exception:
-            logging.debug("Unable to get the host_ip" )
-        try:
-            mount_cmd = target.run("mount -t nfs %s:/opt/caliper_nfs /mnt/caliper_nfs" % (host_ip) )
-        except Exception:
-            try:
-                umount_cmd = target.run("umount /mnt/caliper_nfs/")
-                mount_cmd = target.run("mount -t nfs %s:/opt/caliper_nfs /mnt/caliper_nfs" % (host_ip) )
-            except Exception:
-                logging.debug("Unable to mount")
-                return result
-        readme_file=log_bench+"_README"
-        resultltp = subprocess.call("touch %s"
-                             %(readme_file),shell=True)
-        resultltp = subprocess.call("echo 'The categorization of ltp in caliper is\nCATEGORY\t\t\t\t\t\tSCENARIOS OF LTP\n\n[command]\t\t\t\t\t\tcommands\n[cpu]\t\t\t\t\t\tsched,cpuhotplug\n[memory]\t\t\t\t\t\tmm.numa,hugetlb\n[dio]\t\t\t\t\t\tdio,io,dma_thread_diotest,timers\n[filesystem]\t\t\t\t\t\tfilecaps,fs,fs_bind,fs_ext4,fs_perms_simple,fs_readonly\n[kernel/\t\t\t\t\t\tsyscalls,controllers,pty,containers,admin_tools,modules,can\n[proc]\t\t\t\t\t\tipc,hyperthreading,nptl,cap_bounds,connectors,pipes\n\n\nltp_output.log contains the screenshot of complete ltp execution and ltp_parser.log contains the information regarding the number of tests executed and among them which all have passed failed or skipped.\n\nFor more information regarding a particular category please see ltp_<category>_output.log which contains the output screen and parser log for that particular category' >> %s"
-                  %(readme_file),shell=True)
+
     # for each command in run config file, read the config for the benchmark
     for i in range(0, len(sections_run)):
         flag = 0
@@ -375,9 +347,6 @@ def run_all_cases(target_exec_dir, target, kind_bench, bench_name,
         except Exception:
             logging.debug("no value for the %s" % sections_run[i])
             continue
-	if bench_name == bench_test:
-	    subsection = sections_run[i].split(" ")[1]
-	    subsection_file = log_bench + "_" + subsection + "_output.log"
 
         if os.path.exists(tmp_log_file):
             os.remove(tmp_log_file)
@@ -420,9 +389,6 @@ def run_all_cases(target_exec_dir, target, kind_bench, bench_name,
         except Exception, e:
             logging.info(e)
             crash_handle.main()
-            if bench_name == bench_test:
-                 move_logs = subprocess.call("cp /opt/caliper_nfs/ltp_log/* %s "
-                                % (Folder.exec_dir), shell=True)
 
             server_utils.file_copy(logfile, tmp_log_file, 'a+')
             if os.path.exists(tmp_log_file):
@@ -444,11 +410,6 @@ def run_all_cases(target_exec_dir, target, kind_bench, bench_name,
             else:
               return result
         else:
-            if bench_name == bench_test:
-                move_logs = subprocess.call("cp /opt/caliper_nfs/ltp_log/* %s "
-                                % (Folder.exec_dir), shell=True)
-                if os.path.exists(subsection_file):
-                    server_utils.file_copy(tmp_log_file,subsection_file, 'a+')
             server_utils.file_copy(logfile, tmp_log_file, 'a+')
 
 	    if re.search('application', kind_bench) and bench_name == "nginx":
@@ -900,30 +861,9 @@ def run_kinds_commands(cmd_sec_name, server_run_command, tmp_logfile,
         flag = run_client_command(cmd_sec_name, tmp_logfile, kind_bench,
                                     target, command, bench_name)
     elif re.search('application', kind_bench):
-	if bench_name == "nginx":
-            result = check_ping_response(nginx_clients_count)
-	    if result != 0:
-		logging.info("PING response is not success for one of clients")
-		return -1
-
-            stop_nginx_server()
-            for i in range(1, nginx_clients_count + 1):
-                weighttp_thread = "thread" + str(i)
-		if client_command_dic[str(i)] != None:
-	            weighttp_thread = myThread(i, cmd_sec_name, client_command_dic[str(i)], nginx_tmp_log_file[str(i)],
-                           kind_bench, nginx_clients[str(i)])
-        	    weighttp_thread.start()
-
-	    flag = run_client_command(cmd_sec_name, tmp_logfile, kind_bench,
+        flag = run_client_command(cmd_sec_name, tmp_logfile, kind_bench,
                                     target, command, bench_name)
-
-	    # if any weighttp client threads are active, then kill it
-            stop_weighttp_client(nginx_clients_count)
-
-	else:
-            flag = run_client_command(cmd_sec_name, tmp_logfile, kind_bench,
-                                    target, command, bench_name)
-            flag = run_server_command(cmd_sec_name, server_run_command, tmp_logfile,
+        flag = run_server_command(cmd_sec_name, server_run_command, tmp_logfile,
                        kind_bench, server)
     else:
         logging.debug("only running the command %s in the remote host"
@@ -968,26 +908,15 @@ def parser_case(kind_bench, bench_name, parser_file, parser, infile, outfile):
             outfp = open(outfile, 'a+')
             contents = infp.read()
 
-	    if bench_name == "ltp":
-                 result = methodToCall(contents, outfp)
-	    elif bench_name == "nginx":
+            for content in re.findall("BEGIN TEST(.*?)\[status\]", contents,
+                                        re.DOTALL):
                 try:
                     # call the parser function to filter the output
                     logging.debug("Begining to parser the result of the case")
-                    result = methodToCall(contents, outfp)
+                    result = methodToCall(content, outfp)
                 except Exception, e:
                     logging.info(e)
                     return -5
-	    else:
-                for content in re.findall("BEGIN TEST(.*?)\[status\]", contents,
-                                        re.DOTALL):
-                    try:
-                        # call the parser function to filter the output
-                        logging.debug("Begining to parser the result of the case")
-                        result = methodToCall(content, outfp)
-                    except Exception, e:
-                        logging.info(e)
-                        return -5
             outfp.close()
             infp.close()
     fp.close()
@@ -1066,9 +995,6 @@ def deal_dic_for_yaml(result, tmp, score_way, yaml_file,flag):
         status = write_results.write_multi_dic(result, tmp, score_way,
                                             yaml_file, flag)
     return status
-
-def system_initialise(target):
-    target.run(" sync; echo 3 > /proc/sys/vm/drop_caches; swapoff -a && swapon -a ")
 
 
 def caliper_run(target_exec_dir, server, target, nginx_clients=None):
@@ -1184,27 +1110,7 @@ def caliper_run(target_exec_dir, server, target, nginx_clients=None):
                 crash_handle.main()
                 print_format()
 
-            if sections[i]== "ltp":
-                try:
-                    unmount = target.run("if  df -h |grep caliper_nfs  ; then umount /mnt/caliper_nfs/; fi")
-                except Exception:
-                    unmount = target.run("if  df -h |grep caliper_nfs  ; then fuser -km /mnt/caliper_nfs ;fi")
-                    unmount = target.run("if  df -h |grep caliper_nfs  ; then umount /mnt/caliper_nfs/ ;fi")
-                run_flag = server_utils.get_fault_tolerance_config(
-                                'fault_tolerance', 'run_error_continue')
-                if run_flag == 1:
-                    continue
-                else:
-                    return result
-            else:
-                logging.info("Running %s Finished" % sections[i])
-                if sections[i] == "ltp":
-                    try:
-                         unmount = target.run("if  df -h |grep caliper_nfs  ; then umount /mnt/caliper_nfs/ ;fi")
-                    except Exception:
-                         unmount = target.run("if  df -h |grep caliper_nfs  ; then fuser -km /mnt/caliper_nfs/ ;fi")
-                         unmount = target.run("if  df -h |grep caliper_nfs  ; then umount /mnt/caliper_nfs/ ;fi")
-                    print_format()
+            logging.info("Running %s Finished" % sections[i])
     return 0
 
 def parsing_run(target_exec_dir, target):
