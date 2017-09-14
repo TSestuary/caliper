@@ -241,7 +241,7 @@ def compute_caliper_logs(target_exec_dir,flag = 1):
         os.makedirs(caliper_path.HTML_DATA_DIR_OUTPUT)
 
 def run_all_cases(target_exec_dir, target, kind_bench, bench_name,
-                    run_file, server):
+                    run_file):
     """
     function: run one benchmark which was selected in the configuration files
     """
@@ -300,12 +300,12 @@ def run_all_cases(target_exec_dir, target, kind_bench, bench_name,
 
         client_command_dic = None
 
-        logging.debug("Get the server command is: %s" % server_run_command)
+        #logging.debug("Get the server command is: %s" % server_run_command)
         # run the command of the benchmarks
         try:
             flag = run_kinds_commands(sections_run[i], server_run_command, 
                                       tmp_log_file, kind_bench, bench_name,
-                                      target, command, server, client_command_dic)
+                                      target, command, client_command_dic)
         except Exception, e:
             logging.info(e)
             crash_handle.main()
@@ -628,27 +628,9 @@ def client_thread_func(cmd_sec_name, server_run_command, tmp_logfile,
                     kind_bench, server, 5000)
 
 def run_kinds_commands(cmd_sec_name, server_run_command, tmp_logfile,
-                        kind_bench, bench_name, target, command, server, client_command_dic=None):
-    if re.search('server', kind_bench):
-        logging.debug("Running the server_command: %s, "
-                        "and the client command: %s" %
-                        (server_run_command, command))
-        flag = run_server_command(cmd_sec_name, server_run_command, tmp_logfile,
-                       kind_bench, server)
-        logging.debug("only running the command %s in the remote host"
-                        % command)
-        flag = run_client_command(cmd_sec_name, tmp_logfile, kind_bench,
-                                    target, command, bench_name)
-    elif re.search('application', kind_bench):
-        flag = run_client_command(cmd_sec_name, tmp_logfile, kind_bench,
-                                    target, command, bench_name)
-        flag = run_server_command(cmd_sec_name, server_run_command, tmp_logfile,
-                       kind_bench, server)
-    else:
-        logging.debug("only running the command %s in the remote host"
-                      % command)
-        flag = run_client_command(cmd_sec_name, tmp_logfile, kind_bench,
-                                  target, command, bench_name)
+                        kind_bench, bench_name, target, command, client_command_dic=None):
+    logging.debug("only running the command %s in the remote host"%(command)
+    flag = run_client_command(cmd_sec_name, tmp_logfile, kind_bench, target, command, bench_name)
     return flag
 
 def parser_case(kind_bench, bench_name, parser_file, parser, infile, outfile):
@@ -776,7 +758,7 @@ def deal_dic_for_yaml(result, tmp, score_way, yaml_file,flag):
     return status
 
 
-def caliper_run(target_exec_dir, server, target):
+def caliper_run(target_exec_dir, target):
     # get the test cases defined files
     config_files = server_utils.get_cases_def_files(target_exec_dir)
     logging.debug("the selected configuration are %s" % config_files)
@@ -791,52 +773,6 @@ def caliper_run(target_exec_dir, server, target):
         # get if it is the 'common' or 'arm' or 'android'
         classify = config_files[i].split("/")[-1].strip().split("_")[0]
         logging.debug(classify)
-
-	if classify != "common" and server and len(sections) > 0:
-            try:
-	    	server_ip = settings.get_value("TestNode","ip",type=str)
-	    	server_port = settings.get_value("TestNode","port",type=int)
-                server_user = settings.get_value("TestNode","user",type=str)
-                logging.info("Please wait while caliper triggers the server.py script in the server")
-                server_pwd = server.run("pwd").stdout
-                server_pwd = server_pwd.split("\n")[0]
-                server_caliper_dir = os.path.join(server_pwd, "caliper_server")
-                read_file = os.path.join(server_caliper_dir,"process_status")
-                read_server_run = os.path.join(server_caliper_dir,"server_run")
-                server_caliper_dir = os.path.join(server_caliper_dir,"server.py")
-                server_user = server_user + '@' + server_ip
-                script = server_caliper_dir + ' ' + str(server_port)
-
-                p1 = subprocess.Popen(['ssh', '%s' % server_user,'ps','-ef'], stdout=subprocess.PIPE)
-                p2 = subprocess.Popen(['grep', '-c','server.py'], stdin=p1.stdout, stdout=subprocess.PIPE)
-                p1.stdout.close()
-                data,err = p2.communicate()
-                data = data.strip()
-
-                if data == "0":
-                    subprocess.Popen(['ssh', '%s' % server_user, 'python %s' % script])
-
-
-                for i in range (0,20):
-                    try:
-                        p1 = subprocess.Popen(['ssh', '%s' % server_user, 'cat %s' % read_file], stdout=subprocess.PIPE)
-                        p2 = subprocess.Popen(['grep','1'], stdin=p1.stdout, stdout=subprocess.PIPE)
-                        p1.stdout.close()
-                        server_process,err = p2.communicate()
-                        server_process = server_process.strip()
-                        if server_process == "1":
-                            break
-                        else:
-                            time.sleep(1)
-                    except Exception as e:
-                        pass
-
-            except Exception as e:
-		logging.info(e)
-		raise AttributeError("Error in establising connection with server")
-
-	    server_ip = settings.get_value("TestNode","ip",type=str)
-	    server_port = settings.get_value("TestNode","port",type=int)
 
         for i in range(0, len(sections)):
             # run for each benchmark
@@ -864,25 +800,8 @@ def caliper_run(target_exec_dir, server, target):
             logging.info("Running %s" % sections[i])
             bench = os.path.join(classify, sections[i])
             try:
-		# On some platforms, swapoff and swapon command is not able to execute. 
-		# So this function has been commented
-                #system_initialise(target)
-                if classify != "common" and server:
-                    if server_process == "1":
-                    	logging.info("Waiting for server to grant access")
-                    	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  		    	sock.connect((server_ip,server_port))
-		    	logging.info("%s" % str(sock.recv(1024)))
-		    else:
-                        logging.info("server is not running properly")
-                        continue
 
-                result = run_all_cases(target_exec_dir, target, bench,
-                                        sections[i], run_file, server)
-
-	        if classify != "common" and server:
-                    sock.send("1")
-		    sock.close()
+                result = run_all_cases(target_exec_dir, target, bench, sections[i], run_file)
 
             except Exception:
                 logging.info("Running %s Exception" % sections[i])
@@ -948,7 +867,7 @@ def print_format():
     logging.info("="*55)
 
 
-def run_caliper_tests(target, server, f_option):
+def run_caliper_tests(target, f_option):
     #f_option =1 if -f is used
     if f_option == 1:
         if not os.path.exists(Folder.exec_dir):
@@ -970,7 +889,7 @@ def run_caliper_tests(target, server, f_option):
         flag = 1
     try:
         logging.debug("beginnig to run the test cases")
-        test_result = caliper_run(target_execution_dir, server, target)
+        test_result = caliper_run(target_execution_dir, target)
         if intermediate == 1:
             target_name = server_utils.get_host_name(target)
             yaml_dir = os.path.join(Folder.results_dir, 'yaml')
