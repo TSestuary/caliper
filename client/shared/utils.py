@@ -168,6 +168,7 @@ def get_fault_tolerance_config(section, key):
 
 
 def get_server_cfg_path(bench_name):
+    #just use os.walk traverse directory to get server/application's xxx_run.cfg
     bench_cfg_location = os.path.join(caliper_path.config_files.tests_cfg_dir,
                                         bench_name)
     server_config_file = ''

@@ -49,25 +49,6 @@ class myThread (threading.Thread):
         client_thread_func(self.cmd_sec_name, self.server_run_command, self.tmp_logfile,
                            self.kind_bench, self.server)
 
-def get_server_command(kind_bench, section_name):
-    server_config_file = ''
-
-    server_config_file = server_utils.get_server_cfg_path(kind_bench)
-    if server_config_file != '':
-        server_config, server_sections = \
-                server_utils.read_config_file(server_config_file)
-        if section_name in server_sections:
-	    try:
-            	command = server_config.get(section_name, 'command')
-            	logging.debug("command is %s" % command)
-            	return command
-	    except:
-		return None
-        else:
-            return None
-    else:
-        return None
-
 def parse_all_cases(target_exec_dir, target, kind_bench, bench_name,
                      run_file,parser_file,dic):
     """
@@ -286,7 +267,6 @@ def run_all_cases(target_exec_dir, target, kind_bench, bench_name,
     for i in range(0, len(sections_run)):
         flag = 0
         try:
-            category = configRun.get(sections_run[i], 'category')
             command = configRun.get(sections_run[i], 'command')
         except Exception:
             logging.debug("no value for the %s" % sections_run[i])
@@ -295,16 +275,11 @@ def run_all_cases(target_exec_dir, target, kind_bench, bench_name,
         if os.path.exists(tmp_log_file):
             os.remove(tmp_log_file)
 
-        server_run_command = get_server_command(kind_bench, sections_run[i])
-
-        client_command_dic = None
-
         #logging.debug("Get the server command is: %s" % server_run_command)
         # run the command of the benchmarks
         try:
-            flag = run_kinds_commands(sections_run[i], server_run_command, 
-                                      tmp_log_file, kind_bench, bench_name,
-                                      target, command, client_command_dic)
+            flag = run_kinds_commands(sections_run[i], tmp_log_file, kind_bench, bench_name,
+                                      target, command)
         except Exception, e:
             logging.info(e)
             crash_handle.main()
@@ -425,79 +400,6 @@ def remote_commands_deal(commands, exec_dir, target):
     final_commands = "cd %s; %s" % (exec_dir, actual_commands)
     return final_commands
 
-def run_remote_server_commands(commands, server,
-                    stdout_tee=None, stderr_tee=None, timeout=None):
-    returncode = -1
-    output = ''
-    try:
-            result = server.run(commands, stdout_tee=stdout_tee,
-                                stderr_tee=stderr_tee, timeout=timeout, verbose=True)
-    except error.CmdError, e:
-        raise error.ServRunError(e.args[0], e.args[1])
-    except Exception, e:
-        logging.debug(e)
-    else:
-        if result.exit_status and result.stderr and not result.stdout:
-            returncode = result.exit_status
-        else:
-            returncode = 0
-        try:
-            output = result.stdout
-        except Exception:
-            output = result.stderr
-    return [output, returncode]
-
-def run_server_command(cmd_sec_name, commands, tmp_logfile, kind_bench, server, timeout=None):
-
-    fp = open(tmp_logfile, "a+")
-    # tmp_logfile
-    if not re.search('server', kind_bench):
-        start_log = "%%%%%%         %s test start       %%%%%% \n" % cmd_sec_name
-        fp.write(start_log)
-        fp.write("<<<BEGIN TEST>>>\n")
-        tags = "[test: " + cmd_sec_name + "]\n"
-        fp.write(tags)
-        logs = "log: " + get_actual_commands(commands, server) + "\n"
-        fp.write(logs)
-    flag = 0
-    start = time.time()
-
-    returncode = -1
-    output = ''
-
-    try:
-        # the commands is multiple lines, and was included by Quotation
-	final_commands = get_actual_commands(commands, server)
-        if final_commands is not None and final_commands != '':
-            logging.debug("the actual commands running on the remote client is: %s" % final_commands)
-            [out, returncode] = run_remote_server_commands(final_commands, server, fp, fp, timeout)
-        else:
-            return ['Not command specified', -1]
-    except error.ServRunError, e:
-        if not re.search('server', kind_bench):
-            fp.write("[status]: FAIL\n")
-        sys.stdout.write(e)
-        flag = -1
-    else:
-        if not returncode:
-            if not re.search('server', kind_bench):
-                fp.write("[status]: PASS\n")
-            flag = 1
-        else:
-            if not re.search('server', kind_bench):
-                fp.write("[status]: FAIL\n")
-            flag = 0
-
-    end = time.time()
-    interval = end - start
-    fp.write("Time in Seconds: %.3fs\n" % interval)
-
-    if not re.search('server', kind_bench):
-        fp.write("<<<END>>>\n")
-        fp.write("%%%%%% test_end %%%%%%\n\n")
-    fp.close()
-    return flag
-    
 def run_remote_client_commands(exec_dir, kind_bench, commands, target,
                     stdout_tee=None, stderr_tee=None):
     returncode = -1
@@ -517,6 +419,7 @@ def run_remote_client_commands(exec_dir, kind_bench, commands, target,
     except Exception, e:
         logging.debug(e)
     else:
+        #if return status unormal or err or output is null
         if result.exit_status and result.stderr and not result.stdout:
             returncode = result.exit_status
         else:
@@ -525,84 +428,35 @@ def run_remote_client_commands(exec_dir, kind_bench, commands, target,
             output = result.stdout
         except Exception:
             output = result.stderr
-    return [output, returncode]
-
-def run_commands(exec_dir, kind_bench, commands,
-                    stdout_tee=None, stderr_tee=None, target=None):
-    returncode = -1
-    output = ''
-
-    if not os.path.exists(exec_dir):
-        output = exec_dir + ' not exist'
-        return [output, returncode]
-
-    pwd = os.getcwd()
-    os.chdir(exec_dir)
-    try:
-        # the commands is multiple lines, and was included by Quotation
-        actual_commands = get_actual_commands(commands, target)
-        try:
-            logging.debug("the actual commands running in local is: %s"
-                            % actual_commands)
-            result = utils.run(actual_commands, stdout_tee=stdout_tee,
-                                stderr_tee=stderr_tee, verbose=True)
-        except error.CmdError, e:
-            raise error.ServRunError(e.args[0], e.args[1])
-    except Exception, e:
-        logging.debug(e)
-    else:
-        if result.exit_status and result.stderr and not result.stdout:
-            returncode = result.exit_status
-        else:
-            returncode = 0
-        try:
-            output = result.stdout
-        except Exception:
-            output = result.stderr
-    os.chdir(pwd)
     return [output, returncode]
 
 def run_client_command(cmd_sec_name, tmp_logfile, kind_bench,
                         target, command, bench_name):
 
     fp = open(tmp_logfile, "a+")
-    if not re.search('redis', bench_name):
-        start_log = "%%%%%%         %s test start       %%%%%% \n" % cmd_sec_name
-        fp.write(start_log)
-        fp.write("<<<BEGIN TEST>>>\n")
-        tags = "[test: " + cmd_sec_name + "]\n"
-        fp.write(tags)
-        logs = "log: " + get_actual_commands(command, target) + "\n"
-        fp.write(logs)
+    #this part write log in workspace_timestamp/output/caliper_exec/hardware_info_output_tmp.log
+    #if not re.search('redis', bench_name):
+    start_log = "%%%%%%         %s test start       %%%%%% \n" % cmd_sec_name
+    fp.write(start_log)
+    fp.write("<<<BEGIN TEST>>>\n")
+    tags = "[test: " + cmd_sec_name + "]\n"
+    fp.write(tags)
+    logs = "log: " + get_actual_commands(command, target) + "\n"
+    fp.write(logs)
     start = time.time()
     flag = 0
     logging.debug("the client running command is %s" % command)
 
     # get the execution location in the remote host
-    is_localhost = 0
-    if server_utils.get_target_ip(target) in server_utils.get_local_ip():
-        is_localhost = 1
-    if (is_localhost == 1):
-        arch = server_utils.get_local_machine_arch()
-        host_exec_dir = os.path.join(caliper_path.GEN_DIR, arch)
-    else:
-        host_current_pwd = target.run("pwd").stdout.split("\n")[0]
-        arch = server_utils.get_host_arch(target)
-        host_exec_dir = os.path.join(host_current_pwd, 'caliper',
-                                        "binary", arch)
+    host_current_pwd = target.run("pwd").stdout.split("\n")[0]
+    arch = server_utils.get_host_arch(target)
+    host_exec_dir = os.path.join(host_current_pwd, 'caliper', "binary", arch)
 
     try:
         logging.debug("begining to execute the command of %s on remote host"
                         % command)
-        if (is_localhost == 1):
-            logging.debug("client command in localhost is: %s" % command)
-	    #FIXME: update code for this condition
-            [out, returncode] = run_commands(host_exec_dir, kind_bench,
-                                                command, fp, fp)
-        else:
-            logging.debug("client command in remote target is: %s" % command)
-            [out, returncode] = run_remote_client_commands(host_exec_dir, kind_bench,
-                                                    command, target, fp, fp)
+        logging.debug("client command in remote target is: %s" % command)
+        [out, returncode] = run_remote_client_commands(host_exec_dir, kind_bench, command, target, fp, fp)
     except error.ServRunError, e:
         sys.stdout.write(e)
         flag = -1
@@ -626,9 +480,8 @@ def client_thread_func(cmd_sec_name, server_run_command, tmp_logfile,
     flag = run_server_command(cmd_sec_name, server_run_command, tmp_logfile,
                     kind_bench, server, 5000)
 
-def run_kinds_commands(cmd_sec_name, server_run_command, tmp_logfile,
-                        kind_bench, bench_name, target, command, client_command_dic=None):
-    logging.debug("only running the command %s in the remote host"%(command)
+def run_kinds_commands(cmd_sec_name, tmp_logfile, kind_bench, bench_name, target, command):
+    logging.debug("only running the command %s in the remote host"%(command))
     flag = run_client_command(cmd_sec_name, tmp_logfile, kind_bench, target, command, bench_name)
     return flag
 
