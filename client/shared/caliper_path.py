@@ -65,7 +65,6 @@ if not platForm_name:
 else:
     WORKSPACE = os.path.join(os.environ['HOME'], 'caliper_output',
                              str(platForm_name) + '_WS_' + TIMP_STAMP)
-intermediate = 0
 
 def create_folder(folder, mode=0755):
     if os.path.exists(folder):

@@ -39,8 +39,6 @@ from caliper.server.parser_process import normalize
 from caliper.server.parser_process import openssl
 from caliper.server.parser_process import hardware
 from caliper.server.parser_process import performance_functional
-from caliper.client.shared.caliper_path import intermediate
-
 from caliper.upload import upload
 
 logging.basicConfig(level=logging.INFO)
@@ -367,8 +365,6 @@ if __name__=="__main__":
     if args.score:
         try:
             result2 = test_run.compute_caliper_logs(remote_host,2)
-            if intermediate:
-                parser_caliper(remote_host)
             # copy yaml to corresponding dirs under caliper_out
             copy_yaml(remote_host)
         except Exception as e:
