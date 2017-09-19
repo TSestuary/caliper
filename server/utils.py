@@ -56,6 +56,8 @@ def get_host_name(host):
             output = arch_result.stdout
             try:
                 machine_name = settings.get_value('TARGET', 'Platform_name', type=str)
+                if not machine_name:
+                    machine_name = os.getlogin()
             except:
                 machine_name = output.split(" ")[1]
             return machine_name

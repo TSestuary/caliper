@@ -98,7 +98,10 @@ def parse_all_cases( kind_bench, bench_name, run_file,parser_file,dic):
             infp.close()
             outfp.close()
             parser_result = parser_case(kind_bench, bench_name, parser_file, parser,tmp_log_file, tmp_parser_file)
-            dic[benchOBcept Exception, e:
+
+            dic[bench_name][sections_run[i]]["type"] = type(parser_result)
+            dic[bench_name][sections_run[i]]["value"] = parser_result
+        except Exception, e:
             logging.info("Error while parsing the result of \" %s \""
                             % sections_run[i])
             logging.info(e)
