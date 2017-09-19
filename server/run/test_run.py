@@ -20,10 +20,7 @@ try:
     import caliper.common as common
 except ImportError:
     import common
-#for ltp
 from caliper.server.hosts import abstract_ssh
-#import caliper.server.utils as server_utils
-#for ltp
 from caliper.server.parser_process import test_perf_tranver as traverse
 from caliper.server import crash_handle
 from caliper.client.shared import error
@@ -49,32 +46,25 @@ class myThread (threading.Thread):
         client_thread_func(self.cmd_sec_name, self.server_run_command, self.tmp_logfile,
                            self.kind_bench, self.server)
 
-def parse_all_cases(target_exec_dir, target, kind_bench, bench_name,
-                     run_file,parser_file,dic):
+def parse_all_cases( kind_bench, bench_name, run_file,parser_file,dic):
     """
     function: parse one benchmark which was selected in the configuration files
     """
     try:
         # get the abspath, which is filename of run config for the benchmark
-        bench_conf_file = os.path.join(
-                                    caliper_path.config_files.tests_cfg_dir,
-                                    kind_bench, run_file)
+        bench_conf_file = os.path.join(caliper_path.config_files.tests_cfg_dir, kind_bench, run_file)
         # get the config sections for the benchmrk
-        configRun, sections_run = server_utils.read_config_file(
-                                                    bench_conf_file)
+        configRun, sections_run = server_utils.read_config_file(bench_conf_file)
     except AttributeError as e:
         raise AttributeError
     except Exception:
         raise
-    bench_test = "ltp"
+
     logging.debug("the sections to run are: %s" % sections_run)
     if not os.path.exists(Folder.exec_dir):
         os.mkdir(Folder.exec_dir)
     log_bench = os.path.join(Folder.exec_dir, bench_name)
     logfile = log_bench + "_output.log"
-    if bench_name != bench_test:
-    	if not os.path.exists(logfile):
-	    return -1
     tmp_log_file = log_bench + "_output_tmp.log"
     parser_result_file = log_bench + "_parser.log"
     tmp_parser_file = log_bench + "_parser_tmp.log"
@@ -95,11 +85,6 @@ def parse_all_cases(target_exec_dir, target, kind_bench, bench_name,
         except Exception:
             logging.debug("no value for the %s" % sections_run[i])
             continue
-	if bench_name == bench_test:
-	    subsection = sections_run[i].split(" ")[1]
-	    subsection_file = log_bench + "_" + subsection + "_output.log"
-            if not os.path.exists(subsection_file):
-            	continue
         if os.path.exists(tmp_parser_file):
             os.remove(tmp_parser_file)
         # parser the result in the tmp_log_file, the result is the output of
@@ -107,23 +92,13 @@ def parse_all_cases(target_exec_dir, target, kind_bench, bench_name,
 
         try:
             logging.debug("Parsering the result of command: %s" % command)
-            if bench_name == bench_test:
-                outfp = open(tmp_parser_file, "w")
-                outfp.write("%s" %(subsection))
-                outfp.close()
-                parser_result = parser_case(kind_bench, bench_name, parser_file,
-                                        parser, subsection_file,
-                                        tmp_parser_file)
-            else:
-                outfp = open(logfile, 'r')
-                infp = open(tmp_log_file, 'w')
-                infp.write(re.findall("test start\s+%+(.*?)%+\s+test_end", outfp.read(), re.DOTALL)[i])
-                infp.close()
-                outfp.close()
-                parser_result = parser_case(kind_bench, bench_name, parser_file, parser,tmp_log_file, tmp_parser_file)
-            dic[bench_name][sections_run[i]]["type"] = type(parser_result)
-            dic[bench_name][sections_run[i]]["value"] = parser_result
-        except Exception, e:
+            outfp = open(logfile, 'r')
+            infp = open(tmp_log_file, 'w')
+            infp.write(re.findall("test start\s+%+(.*?)%+\s+test_end", outfp.read(), re.DOTALL)[i])
+            infp.close()
+            outfp.close()
+            parser_result = parser_case(kind_bench, bench_name, parser_file, parser,tmp_log_file, tmp_parser_file)
+            dic[benchOBcept Exception, e:
             logging.info("Error while parsing the result of \" %s \""
                             % sections_run[i])
             logging.info(e)
@@ -140,10 +115,11 @@ def parse_all_cases(target_exec_dir, target, kind_bench, bench_name,
             if (parser_result <= 0):
                 continue
 
-def compute_caliper_logs(target_exec_dir,flag = 1):
+
+def compute_caliper_logs(target,flag = 1):
     # according the method in the config file, compute the score
     dic = yaml.load(open(caliper_path.folder_ope.final_parser, 'r'))
-    config_files = server_utils.get_cases_def_files(target_exec_dir)
+    config_files = server_utils.get_cases_def_files(target)
     for i in range(0, len(config_files)):
         config_file = os.path.join(config_files[i])
         config, sections = server_utils.read_config_file(config_file)
@@ -195,16 +171,16 @@ def compute_caliper_logs(target_exec_dir,flag = 1):
                                 % command)
                     if scores_way1 == None:
                         flag_compute = compute_case_score(dic[sections[j]][sections_run[k]]["value"], category,
-                                          scores_way, target_exec_dir, flag)
+                                          scores_way, target, flag)
                     else:
                         # if scores_way1 is defined, it menas the test case contains both types of test results:
                         # higher the better and lower the better
                         dic_name = sections_run[k] + "_latency"
                         flag_compute = compute_case_score(dic[sections[j]][sections_run[k]]["value"][dic_name], category,
-                                          scores_way, target_exec_dir, flag)
+                                          scores_way, target, flag)
                         dic_name = sections_run[k] + "_bandwidth"
                         flag_compute = compute_case_score(dic[sections[j]][sections_run[k]]["value"][dic_name], category,
-                                          scores_way1, target_exec_dir, flag)
+                                          scores_way1, target, flag)
                 except Exception, e:
                     logging.info("Error while computing the result of \"%s\""  % sections_run[k])
                     logging.info(e)
@@ -458,12 +434,15 @@ def run_client_command(cmd_sec_name, tmp_logfile, kind_bench,
         logging.debug("client command in remote target is: %s" % command)
         [out, returncode] = run_remote_client_commands(host_exec_dir, kind_bench, command, target, fp, fp)
     except error.ServRunError, e:
+        fp.write("[status]: FAIL\n")
         sys.stdout.write(e)
         flag = -1
     else:
         if not returncode:
+            fp.write("[status]: PASS\n")
             flag = 1
         else:
+            fp.write("[status]: FAIL\n")
             flag = 0
 
     end = time.time()
@@ -663,8 +642,9 @@ def caliper_run(target_exec_dir, target):
             logging.info("Running %s Finished" % sections[i])
     return 0
 
-def parsing_run(target_exec_dir, target):
+def parsing_run(target):
     # get the test cases defined files
+    target_exec_dir = server_utils.get_target_exec_dir(target)
     config_files = server_utils.get_cases_def_files(target_exec_dir)
     logging.debug("the selected configuration are %s" % config_files)
     dic = {}
@@ -693,8 +673,7 @@ def parsing_run(target_exec_dir, target):
             bench = os.path.join(classify, sections[i])
 
             try:
-                result = parse_all_cases(target_exec_dir, target, bench,
-                                       sections[i], run_file, parser, dic)
+                result = parse_all_cases(  bench, sections[i], run_file, parser, dic)
             except Exception:
                 logging.info("Parsing %s Exception" % sections[i])
                 crash_handle.main()
@@ -764,10 +743,10 @@ def parser_caliper_tests(target,f_option):
     if not os.path.exists(Folder.html_dir):
         os.mkdir(Folder.html_dir)
     flag = 0
-    target_execution_dir = server_utils.get_target_exec_dir(target)
+    #target_execution_dir = server_utils.get_target_exec_dir(target)
     try:
         logging.debug("beginnig to parse the test cases")
-        test_result = parsing_run(target_execution_dir, target)
+        test_result = parsing_run( target)
     except error.CmdError:
         logging.info("There is wrong in parsing test cases")
         flag = 1
