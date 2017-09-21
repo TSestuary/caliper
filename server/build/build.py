@@ -594,29 +594,7 @@ def build_each_tool(dirname, section_name, des_build_file, arch='x86_86'):
             logging.info("Building Successful")
             logging.info("=" * 55)
             record_log(log_file, arch, 1)
-    server_config = server_utils.get_server_cfg_path(
-                                    os.path.join(dirname, section_name))
-    # Not sure the server_config related section to be retained...
-    if (server_config != ''):
-        local_arch = server_utils.get_local_machine_arch()
-        if (local_arch != arch):
-            result = subprocess.call("%s %s %s %s> %s 2>&1"
-                                    % (des_build_file, local_arch,
-                                        CALIPER_DIR, TMP_DIR, log_file),
-                                        shell=True)
-            end_time = datetime.datetime.now()
-            subprocess.call("echo '$$ %s BUILD STOP: %s' >> %s"
-                            % (section_name, str(end_time)[:19],
-                                FOLDER.caliper_log_file), shell=True)
-            subprocess.call("echo '$$ %s BUILD DURATION %s Seconds' >> %s"
-                            % (section_name, (end_time-start_time).seconds,
-                                FOLDER.caliper_log_file), shell=True)
-            if result:
-                record_log(log_file, local_arch, 0)
-            else:
-                record_log(log_file, local_arch, 1)
-            logging.debug("There is exception when building the benchmarks\
-                        for localhost")
+
     return result
 
 

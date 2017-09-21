@@ -19,23 +19,20 @@ lscpu_list = ['Architecture','Socket\(s\)','Cpu_Type','Core\(s\) per socket','Th
 lsb_release_list = ['Distributor ID','Description','Release','Codename']
 lspci_list = ['Ethernet controller [0200]']
 def get_remote_host():
-    try:
-        client_ip = settings.get_value('TARGET', 'ip', type=str)
-    except Exception, e:
+    client_ip = settings.get_value('TARGET', 'ip', type=str)
+    if not client_ip:
         client_ip = '127.0.0.1'
-    try:
-        port = settings.get_value('TARGET', 'port', type=int)
-    except Exception, e:
+    port = settings.get_value('TARGET', 'port', type=int)
+    if not port:
         port = 22
-    try:
-        user = settings.get_value('TARGET', 'user', type=str)
-    except Exception, e:
+
+    user = settings.get_value('TARGET', 'user', type=str)
+    if not user:
         user = os.getlogin()
     try:
         password = settings.get_value('TARGET', 'password', type=str)
     except Exception, e:
         raise error.ServRunError(e.args[0], e.args[1])
-
     remote_host = host_factory.create_host(client_ip, user, password, port)
     return remote_host
 
@@ -68,6 +65,11 @@ def network_populate(dic,contents):
     return
 
 def os_populate(dic,contents):
+    '''
+    traverse all of contents, it's very bad, optimation is necessary;
+    just used to get lsb_release / gcc / ld
+    the Architecture is very bad.
+    '''
     for blocks in contents:
         if blocks != '':
           if re.search(r'(\d+)[.]([\w /]+)', blocks):
@@ -342,6 +344,7 @@ def hardware_info_parser(content,outfp):
     dic_yaml['Configuration'] = {}
     dic_yaml['name'] = {}
     contents = content.split('\n\n\n')
+    #below value just used to get category{ CPU DISK NETWORK MEMORY KERNEL OS }
     for key,value in category.iteritems():
         value(dic)
     try:

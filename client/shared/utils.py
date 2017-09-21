@@ -114,19 +114,24 @@ def get_cases_def_files(option):
                                     common_cfg)
     cfg_files.append(common_cfg_path)
 
-    application_cfg = "application" + cases_tail
-    application_cfg_path = os.path.join(caliper_path.config_files.tests_cfg_dir,
-                                        application_cfg)
-    cfg_files.append(application_cfg_path)
+    #application_cfg = "application" + cases_tail
+    #application_cfg_path = os.path.join(caliper_path.config_files.tests_cfg_dir,
+    #                                    application_cfg)
+    #cfg_files.append(application_cfg_path)
 
-    if (option == 'arm_32'):
-        other_cfg = "arm" + cases_tail
-    elif (option == 'android'):
-        other_cfg = "android" + cases_tail
-    elif (option == 'arm_64'):
-        other_cfg = "server" + cases_tail
+    #if (option == 'arm_32'):
+    #    other_cfg = "arm" + cases_tail
+    #elif (option == 'android'):
+    #    other_cfg = "android" + cases_tail
+    #elif (option == 'arm_64'):
+    #    other_cfg = "server" + cases_tail
+    #else:
+    #    other_cfg = 'server' + cases_tail
+    if (option == 'arm_64'):
+        other_cfg = 'server' + cases_tail
     else:
         other_cfg = 'server' + cases_tail
+
     other_cfg_path = os.path.join(caliper_path.config_files.tests_cfg_dir,
                                     other_cfg)
     cfg_files.append(other_cfg_path)
@@ -165,34 +170,6 @@ def get_fault_tolerance_config(section, key):
             logging.info("Wrong configuration in config/execution_contl.cfg")
             flag = 0
         return flag
-
-
-def get_server_cfg_path(bench_name):
-    #just use os.walk traverse directory to get server/application's xxx_run.cfg
-    bench_cfg_location = os.path.join(caliper_path.config_files.tests_cfg_dir,
-                                        bench_name)
-    server_config_file = ''
-    for root, dirs, files in os.walk(os.path.abspath(bench_cfg_location)):
-        for i in range(0, len(files)):
-            if re.search('server', files[i]):
-                server_config_file = os.path.join(root, files[i])
-                break
-            if re.search('application', files[i]):
-                server_config_file = os.path.join(root, files[i])
-                break
-
-    return server_config_file
-
-def get_application_cfg_path(bench_name):
-    bench_cfg_location = os.path.join(caliper_path.config_files.tests_cfg_dir,
-                                        bench_name)
-    application_config_file = ''
-    for root, dirs, files in os.walk(os.path.abspath(bench_cfg_location)):
-        for i in range(0, len(files)):
-            if re.search('application', files[i]):
-                application_config_file = os.path.join(root, files[i])
-                break
-    return application_config_file
 
 def get_stream_tee_file(stream, level, prefix=''):
     if stream is None:
